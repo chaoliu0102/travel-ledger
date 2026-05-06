@@ -922,18 +922,15 @@ async function refreshFromCloud() {
       id: record.id || `cloud-${cloudRecordId(record)}`,
       projectName: currentProject.name,
       projectCurrencies: currentProject.currencies,
+      amount: Number(record.amount || 0) || 0,
+      buyer: String(record.buyer || "").trim(),
+      payer: String(record.payer || "").trim(),
       status: "synced",
       syncMode: "cloud",
     }));
     mergeCurrentProjectPeople(cloudRecords);
     saveProjectsToCloud().catch(() => {});
-    const cloudIds = new Set(cloudRecords.map(cloudRecordId));
-    const localOnly = expenses.filter(
-      (expense) =>
-        expense.projectName !== currentProject.name ||
-        expense.status !== "synced" ||
-        !cloudIds.has(cloudRecordId(expense)),
-    );
+    const localOnly = expenses.filter((expense) => expense.projectName !== currentProject.name || expense.status !== "synced");
     expenses = [...localOnly, ...cloudRecords];
     saveJson(STORAGE_KEYS.expenses, expenses);
     render();
