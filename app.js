@@ -339,7 +339,8 @@ async function initializeEndpointUrlFromSheet() {
 }
 
 function getPeople() {
-  return normalizeList(getCurrentProject().people, DEFAULT_PROJECT.people);
+  const projectPeople = normalizeList(getCurrentProject().people, []);
+  return projectPeople.length ? projectPeople : DEFAULT_PROJECT.people;
 }
 
 function getProjects() {
@@ -578,16 +579,19 @@ function getStats() {
   for (const expense of currentExpenses) {
     const currency = expense.currency;
     const amount = Number(expense.amount || 0);
-    if (!byPerson[expense.buyer]) byPerson[expense.buyer] = emptyStats();
-    if (!byPerson[expense.payer]) byPerson[expense.payer] = emptyStats();
+    const buyer = String(expense.buyer || "").trim();
+    const payer = String(expense.payer || "").trim();
+    if (!buyer) continue;
+    if (!byPerson[buyer]) byPerson[buyer] = emptyStats();
+    if (payer && !byPerson[payer]) byPerson[payer] = emptyStats();
 
-    addToTotals(byPerson[expense.buyer].spent, currency, amount);
-    if (expense.buyer !== expense.payer) {
-      addToTotals(byPerson[expense.payer].paidForOthers, currency, amount);
+    addToTotals(byPerson[buyer].spent, currency, amount);
+    if (payer && buyer !== payer) {
+      addToTotals(byPerson[payer].paidForOthers, currency, amount);
       if (!expense.settled) {
-        addToTotals(byPerson[expense.payer].owedByOthers, currency, amount);
-        addToTotals(byPerson[expense.buyer].owesToOthers, currency, amount);
-        const key = `${expense.buyer}__${expense.payer}__${currency}`;
+        addToTotals(byPerson[payer].owedByOthers, currency, amount);
+        addToTotals(byPerson[buyer].owesToOthers, currency, amount);
+        const key = `${buyer}__${payer}__${currency}`;
         pairMap.set(key, (pairMap.get(key) || 0) + amount);
       }
     }
@@ -924,7 +928,7 @@ async function refreshFromCloud() {
       projectCurrencies: currentProject.currencies,
       amount: Number(record.amount || 0) || 0,
       buyer: String(record.buyer || "").trim(),
-      payer: String(record.payer || "").trim(),
+      payer: String(record.payer || record.buyer || "").trim(),
       status: "synced",
       syncMode: "cloud",
     }));
