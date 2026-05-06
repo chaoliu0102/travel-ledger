@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260507-2" />
-    <link rel="icon" href="./icon.svg?v=20260507-2" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260507-4" />
+    <link rel="icon" href="./icon.svg?v=20260507-4" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260507-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260507-4" />
   </head>
   <body>
     <main class="app-shell">
@@ -43,6 +43,7 @@
         <button class="tab is-active" type="button" data-view="entryView">記帳</button>
         <button class="tab" type="button" data-view="peopleView">個人明細</button>
         <button class="tab" type="button" data-view="statsView">統計</button>
+        <button class="tab" type="button" data-view="helpView">說明</button>
       </nav>
 
       <section class="status-strip">
@@ -152,6 +153,37 @@
           <div class="settlement-list" id="settlementList"></div>
         </section>
       </section>
+
+      <section class="view" id="helpView">
+        <section class="panel help-panel">
+          <div class="section-heading">
+            <h2>使用說明</h2>
+            <span class="subtle">旅途中快速記一筆即可</span>
+          </div>
+          <div class="help-list">
+            <article>
+              <strong>1. 選專案</strong>
+              <p>先確認上方旅遊專案正確。不同旅程會寫入不同 Google Sheet 分頁。</p>
+            </article>
+            <article>
+              <strong>2. 記消費</strong>
+              <p>填日期、店家、摘要、支付方式、幣別、金額、購買人與付款人後送出。</p>
+            </article>
+            <article>
+              <strong>3. 看分帳</strong>
+              <p>個人明細可看每個人的消費紀錄；統計頁可看總消費與代墊是否結清。</p>
+            </article>
+            <article>
+              <strong>4. 同步資料</strong>
+              <p>按同步會把本機待同步資料送到 Google Sheet；按雲端更新會抓回最新資料與專案清單。</p>
+            </article>
+            <article>
+              <strong>5. 結清或修改</strong>
+              <p>逐筆明細可勾選代墊已結清，也可編輯或刪除已記錄的消費。</p>
+            </article>
+          </div>
+        </section>
+      </section>
     </main>
 
     <dialog class="settings-dialog" id="settingsDialog">
@@ -164,16 +196,15 @@
           <span>Apps Script Web App URL</span>
           <input id="endpointUrl" type="url" placeholder="https://script.google.com/macros/s/..." />
         </label>
-        <label class="field">
-          <span>目前專案人員名單</span>
-          <input id="peopleInput" type="text" placeholder="兆, 婷" />
-        </label>
-        <label class="field">
-          <span>旅遊專案名單</span>
-          <input id="projectsInput" type="text" placeholder="澳門 2026, 東京 2026" />
-        </label>
         <button class="primary-button" id="saveSettingsButton" type="button">儲存設定</button>
-        <p class="hint">同一個 Apps Script URL 可給旅伴共用。每台手機會先暫存在本機，再同步到同一份 Google Sheet。</p>
+        <label class="field">
+          <span>匯入專案</span>
+          <div class="inline-field">
+            <input id="importProjectInput" type="text" placeholder="輸入 Google Sheet 分頁名稱" />
+            <button class="tool-button" id="importProjectButton" type="button" aria-label="匯入專案" title="匯入專案">＋</button>
+          </div>
+        </label>
+        <p class="hint">同一個 Apps Script URL 可給旅伴共用。APP 會嘗試從 Google Sheet 自動帶入最新 URL；每台手機會先暫存在本機，再同步到同一份 Google Sheet。</p>
       </form>
     </dialog>
 
@@ -208,6 +239,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260507-2" type="module"></script>
+    <script src="./app.js?v=20260507-4" type="module"></script>
   </body>
 </html>

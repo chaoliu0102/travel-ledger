@@ -3,6 +3,9 @@ const STORAGE_KEYS = {
   settings: "travel-split.settings",
 };
 
+const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
+const URL_HISTORY_SHEET = "AppScriptUrls";
+
 const CURRENCY_LABELS = {
   TWD: "台幣",
   MOP: "澳門元",
@@ -39,8 +42,8 @@ const amountInput = document.querySelector("#amount");
 const buyerInput = document.querySelector("#buyer");
 const payerInput = document.querySelector("#payer");
 const endpointUrlInput = document.querySelector("#endpointUrl");
-const peopleInput = document.querySelector("#peopleInput");
-const projectsInput = document.querySelector("#projectsInput");
+const importProjectInput = document.querySelector("#importProjectInput");
+const importProjectButton = document.querySelector("#importProjectButton");
 const projectSelect = document.querySelector("#projectSelect");
 const addProjectButton = document.querySelector("#addProjectButton");
 const editProjectButton = document.querySelector("#editProjectButton");
@@ -250,6 +253,89 @@ function requestScript(url, timeoutMs = 15000) {
   });
 }
 
+function requestJsonp(url, callbackParam, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `travelSplitJsonp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script = document.createElement("script");
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("連線逾時"));
+    }, timeoutMs);
+
+    function cleanup() {
+      window.clearTimeout(timer);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (result) => {
+      cleanup();
+      resolve(result);
+    };
+
+    if (url.includes("__CALLBACK__")) {
+      script.src = url.replace("__CALLBACK__", encodeURIComponent(callbackName));
+    } else {
+      const joiner = url.includes("?") ? "&" : "?";
+      script.src = `${url}${joiner}${callbackParam}=${encodeURIComponent(callbackName)}`;
+    }
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("無法讀取 Google Sheet 設定"));
+    };
+    document.body.append(script);
+  });
+}
+
+async function fetchLatestEndpointFromSheet() {
+  const params = new URLSearchParams({
+    sheet: URL_HISTORY_SHEET,
+    tqx: "out:json;responseHandler:__CALLBACK__",
+    tq: "select A,B",
+    ts: String(Date.now()),
+  });
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?${params.toString()}`;
+  const result = await requestJsonp(url, "callback");
+  const rows = result?.table?.rows || [];
+  const urls = rows
+    .map((row) => String(row.c?.[1]?.v || row.c?.[1]?.f || "").trim())
+    .filter((value) => value.startsWith("https://script.google.com/macros/s/"));
+  return urls.at(-1) || "";
+}
+
+async function fetchLatestEndpointFromCurrentEndpoint() {
+  if (!settings.endpointUrl) return "";
+  const params = new URLSearchParams({
+    action: "latestEndpoint",
+    ts: String(Date.now()),
+  });
+  const result = await requestScript(buildEndpointUrl(params));
+  return String(result.endpointUrl || "").trim();
+}
+
+async function initializeEndpointUrlFromSheet() {
+  try {
+    let latestUrl = "";
+    try {
+      latestUrl = await fetchLatestEndpointFromCurrentEndpoint();
+    } catch {
+      latestUrl = "";
+    }
+    if (!latestUrl) latestUrl = await fetchLatestEndpointFromSheet();
+    if (!latestUrl || latestUrl === settings.endpointUrl) return false;
+    settings = normalizeSettings({
+      ...settings,
+      endpointUrl: latestUrl,
+    });
+    saveJson(STORAGE_KEYS.settings, settings);
+    applySettingsToUi();
+    showToast("已自動帶入最新 Apps Script URL");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getPeople() {
   return normalizeList(getCurrentProject().people, DEFAULT_PROJECT.people);
 }
@@ -406,8 +492,6 @@ async function fetchLatestExchangeRate() {
 
 function applySettingsToUi() {
   endpointUrlInput.value = settings.endpointUrl;
-  peopleInput.value = getPeople().join(", ");
-  projectsInput.value = getProjects().map((project) => project.name).join(", ");
   fillPeopleSelects();
   fillProjectSelect();
   fillCurrencyOptions();
@@ -740,7 +824,44 @@ async function refreshProjectsFromCloud() {
   saveJson(STORAGE_KEYS.settings, settings);
   applySettingsToUi();
   setCurrentProject(settings.currentProject);
+  saveProjectsToCloud().catch(() => {});
   return true;
+}
+
+async function importProjectFromCloud() {
+  const projectName = importProjectInput.value.trim();
+  if (!projectName) {
+    showToast("請輸入 Google Sheet 分頁名稱");
+    return;
+  }
+  settings = normalizeSettings({
+    ...settings,
+    endpointUrl: endpointUrlInput.value.trim() || settings.endpointUrl,
+  });
+  saveJson(STORAGE_KEYS.settings, settings);
+  if (!settings.endpointUrl) {
+    showToast("請先儲存 Apps Script Web App URL");
+    return;
+  }
+
+  importProjectButton.disabled = true;
+  try {
+    await refreshProjectsFromCloud();
+    const imported = getProjects().find((project) => project.name === projectName);
+    if (!imported) {
+      showToast("找不到同名 Google Sheet 分頁");
+      return;
+    }
+    setCurrentProject(imported.name);
+    await refreshFromCloud();
+    importProjectInput.value = "";
+    settingsDialog.close();
+    showToast(`已匯入「${imported.name}」`);
+  } catch (error) {
+    showToast(error.message || "匯入專案失敗");
+  } finally {
+    importProjectButton.disabled = false;
+  }
 }
 
 function cloudRecordId(record) {
@@ -1039,33 +1160,21 @@ saveProjectButton.addEventListener("click", async () => {
 settingsButton.addEventListener("click", () => settingsDialog.showModal());
 
 document.querySelector("#saveSettingsButton").addEventListener("click", async () => {
-  const typedProjectNames = projectsInput.value
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-  const oldProjects = new Map(getProjects().map((project) => [project.name, project]));
-  const projects = typedProjectNames.map((name) => oldProjects.get(name) || { name, people: getPeople(), currencies: ["TWD"] });
-  const currentProjectName = getCurrentProject().name;
-  const currentProject = projects.find((project) => project.name === currentProjectName);
-  if (currentProject) {
-    currentProject.people = peopleInput.value
-      .split(",")
-      .map((name) => name.trim())
-      .filter(Boolean);
-  }
-
   settings = normalizeSettings({
+    ...settings,
     endpointUrl: endpointUrlInput.value.trim(),
-    projects,
-    currentProject: settings.currentProject,
   });
   saveJson(STORAGE_KEYS.settings, settings);
   applySettingsToUi();
   render();
   settingsDialog.close();
+  if (!settings.endpointUrl) {
+    showToast("設定已儲存");
+    return;
+  }
   try {
-    await refreshProjectsFromCloud();
-    showToast("設定已儲存，已載入雲端專案");
+    const loaded = await refreshProjectsFromCloud();
+    showToast(loaded ? "設定已儲存，已載入雲端專案" : "設定已儲存，已建立雲端專案清單");
   } catch {
     try {
       await saveProjectsToCloud();
@@ -1075,6 +1184,8 @@ document.querySelector("#saveSettingsButton").addEventListener("click", async ()
     }
   }
 });
+
+importProjectButton.addEventListener("click", importProjectFromCloud);
 
 spentDateInput.value = todayDateValue();
 applySettingsToUi();
@@ -1102,3 +1213,7 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
   });
 }
+
+initializeEndpointUrlFromSheet().then((updated) => {
+  if (updated) refreshProjectsFromCloud().catch(() => {});
+});

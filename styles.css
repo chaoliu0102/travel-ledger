@@ -95,7 +95,7 @@ h2 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   margin-bottom: 12px;
   padding: 5px;
@@ -632,6 +632,33 @@ h2 {
 
 .hint {
   font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.help-panel {
+  box-shadow: var(--shadow);
+}
+
+.help-list {
+  display: grid;
+  gap: 10px;
+}
+
+.help-list article {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #faf8f4;
+}
+
+.help-list strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.help-list p {
+  color: var(--muted);
+  font-size: 0.9rem;
   line-height: 1.55;
 }
 
