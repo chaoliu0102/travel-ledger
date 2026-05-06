@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#8fa192" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
+    <title>說走就走 小帳本</title>
+    <link rel="manifest" href="./manifest.webmanifest?v=20260506-5" />
+    <link rel="icon" href="./icon.svg?v=20260506-5" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css?v=20260506-5" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="kicker">Trip Ledger</p>
+          <h1>說走就走 小帳本</h1>
+        </div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="設定">設定</button>
+      </header>
+
+      <section class="connection-banner" id="connectionBanner">
+        <span id="connectionStatus">連線正常</span>
+        <button class="text-button" id="installButton" type="button" hidden>安裝</button>
+      </section>
+
+      <section class="project-bar" aria-label="旅遊專案">
+        <label class="field compact">
+          <span>旅遊專案</span>
+          <select id="projectSelect"></select>
+        </label>
+        <div class="icon-actions">
+          <button class="tool-button" id="addProjectButton" type="button" aria-label="新增專案" title="新增專案">＋</button>
+          <button class="tool-button" id="editProjectButton" type="button" aria-label="編輯專案" title="編輯專案">✎</button>
+          <button class="tool-button danger-tool" id="deleteProjectButton" type="button" aria-label="刪除專案" title="刪除專案">🗑</button>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="頁面">
+        <button class="tab is-active" type="button" data-view="entryView">記帳</button>
+        <button class="tab" type="button" data-view="peopleView">個人明細</button>
+        <button class="tab" type="button" data-view="statsView">統計</button>
+      </nav>
+
+      <section class="status-strip">
+        <div>
+          <span>今日新增</span>
+          <strong id="todayTotal">NT$0</strong>
+        </div>
+        <div>
+          <span>待同步</span>
+          <strong id="pendingCount">0</strong>
+        </div>
+        <div class="action-row">
+          <button class="tool-button" id="syncButton" type="button" aria-label="同步" title="同步">↻</button>
+          <button class="tool-button" id="refreshCloudButton" type="button" aria-label="雲端更新" title="雲端更新">☁</button>
+          <button class="tool-button" id="shareButton" type="button" aria-label="分享" title="分享">⇪</button>
+        </div>
+      </section>
+
+      <section class="view is-visible" id="entryView">
+        <form class="expense-form" id="expenseForm">
+          <div class="grid-2">
+            <label class="field">
+              <span>消費日期</span>
+              <input id="spentDate" name="spentDate" type="date" required />
+            </label>
+            <label class="field">
+              <span>支付方式</span>
+              <select id="paymentMethod" name="paymentMethod" required>
+                <option value="刷卡">刷卡</option>
+                <option value="現金">現金</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>消費店家</span>
+            <input id="merchant" name="merchant" autocomplete="off" placeholder="Klook、餐廳、超商" required />
+          </label>
+
+          <label class="field">
+            <span>消費摘要</span>
+            <input id="summary" name="summary" autocomplete="off" placeholder="門票、午餐、計程車" required />
+          </label>
+
+          <div class="amount-panel">
+            <div class="segmented" id="currencyOptions" aria-label="幣別"></div>
+            <label class="amount-field">
+              <span>金額</span>
+              <input id="amount" name="amount" inputmode="decimal" autocomplete="off" placeholder="0" required />
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              <span>購買人</span>
+              <select id="buyer" name="buyer" required></select>
+            </label>
+            <label class="field">
+              <span>付款人</span>
+              <select id="payer" name="payer" required></select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>備註</span>
+            <textarea id="note" name="note" rows="2" placeholder="訂編、結清註記、補充說明"></textarea>
+          </label>
+
+          <label class="check-field">
+            <input id="settled" name="settled" type="checkbox" />
+            <span>這筆代墊已結清</span>
+          </label>
+
+          <div class="form-actions">
+            <button class="primary-button" id="submitExpenseButton" type="submit">記一筆</button>
+            <button class="secondary-button" id="cancelEditExpenseButton" type="button" hidden>取消編輯</button>
+          </div>
+        </form>
+
+        <section class="list-section">
+          <div class="section-heading">
+            <h2>最近紀錄</h2>
+            <button class="text-button" id="clearSyncedButton" type="button">清除已同步</button>
+          </div>
+          <div class="expense-list" id="recentList"></div>
+        </section>
+      </section>
+
+      <section class="view" id="peopleView">
+        <div class="panel">
+          <label class="field compact">
+            <span>查看購買人</span>
+            <select id="personFilter"></select>
+          </label>
+          <div class="person-summary" id="personSummary"></div>
+        </div>
+        <div class="expense-list" id="personList"></div>
+      </section>
+
+      <section class="view" id="statsView">
+        <div class="stats-grid" id="statsGrid"></div>
+        <section class="panel">
+          <div class="section-heading">
+            <h2>代墊結算</h2>
+            <span class="subtle">正數代表對方需歸還</span>
+          </div>
+          <div class="settlement-list" id="settlementList"></div>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="settings-dialog" id="settingsDialog">
+      <form method="dialog" class="settings-panel">
+        <div class="section-heading">
+          <h2>同步設定</h2>
+          <button class="icon-button" value="close" type="submit" aria-label="關閉">關閉</button>
+        </div>
+        <label class="field">
+          <span>Apps Script Web App URL</span>
+          <input id="endpointUrl" type="url" placeholder="https://script.google.com/macros/s/..." />
+        </label>
+        <label class="field">
+          <span>目前專案人員名單</span>
+          <input id="peopleInput" type="text" placeholder="兆, 婷" />
+        </label>
+        <label class="field">
+          <span>旅遊專案名單</span>
+          <input id="projectsInput" type="text" placeholder="澳門 2026, 東京 2026" />
+        </label>
+        <button class="primary-button" id="saveSettingsButton" type="button">儲存設定</button>
+        <p class="hint">同一個 Apps Script URL 可給旅伴共用。每台手機會先暫存在本機，再同步到同一份 Google Sheet。</p>
+      </form>
+    </dialog>
+
+    <dialog class="settings-dialog" id="projectDialog">
+      <form method="dialog" class="settings-panel">
+        <div class="section-heading">
+          <h2 id="projectDialogTitle">新增旅遊專案</h2>
+          <button class="icon-button" value="close" type="submit" aria-label="關閉">關閉</button>
+        </div>
+        <label class="field">
+          <span>旅遊專案名稱</span>
+          <input id="projectNameInput" type="text" placeholder="大阪 2026" />
+        </label>
+        <label class="field">
+          <span>此專案人員名單</span>
+          <input id="projectPeopleInput" type="text" placeholder="兆, 婷, 朋友A" />
+        </label>
+        <div class="field">
+          <span>此專案可用幣別</span>
+          <div class="currency-checks" id="projectCurrencyOptions"></div>
+        </div>
+        <label class="field">
+          <span>目的地幣別匯率（1 外幣 = 幾台幣）</span>
+          <div class="inline-field">
+            <input id="projectExchangeRateInput" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="例如 4.0" />
+            <button class="tool-button" id="fetchRateButton" type="button" aria-label="更新最新匯率" title="更新最新匯率">↯</button>
+          </div>
+        </label>
+        <button class="primary-button" id="saveProjectButton" type="button">建立專案</button>
+        <p class="hint">台幣會固定保留；其餘幣別可依目的地勾選。</p>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js?v=20260506-5" type="module"></script>
+  </body>
+</html>

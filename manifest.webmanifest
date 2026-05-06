@@ -1,0 +1,18 @@
+{
+  "name": "說走就走 小帳本",
+  "short_name": "小帳本",
+  "description": "旅行記帳、代墊統計與 Google Sheet 同步",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f1ec",
+  "theme_color": "#8fa192",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
