@@ -695,6 +695,54 @@ function buildCloudListUrl() {
   return buildEndpointUrl(params);
 }
 
+function buildCloudProjectsUrl() {
+  const params = new URLSearchParams({
+    action: "listProjects",
+    ts: String(Date.now()),
+  });
+  return buildEndpointUrl(params);
+}
+
+async function saveProjectsToCloud() {
+  if (!settings.endpointUrl) return;
+  const params = new URLSearchParams({
+    payload: JSON.stringify({ action: "saveProjects", projects: getProjects() }),
+    ts: String(Date.now()),
+  });
+  await requestScript(buildEndpointUrl(params));
+}
+
+async function renameProjectOnCloud(oldName, newName) {
+  if (!settings.endpointUrl || !oldName || oldName === newName) return;
+  const params = new URLSearchParams({
+    payload: JSON.stringify({ action: "renameProject", oldName, newName }),
+    ts: String(Date.now()),
+  });
+  await requestScript(buildEndpointUrl(params));
+}
+
+async function refreshProjectsFromCloud() {
+  if (!settings.endpointUrl) return false;
+  const result = await requestScript(buildCloudProjectsUrl());
+  const cloudProjects = normalizeProjects(result.projects || []);
+  if (!cloudProjects.length) {
+    await saveProjectsToCloud();
+    return false;
+  }
+  const currentProject = cloudProjects.some((project) => project.name === settings.currentProject)
+    ? settings.currentProject
+    : cloudProjects[0].name;
+  settings = normalizeSettings({
+    ...settings,
+    projects: cloudProjects,
+    currentProject,
+  });
+  saveJson(STORAGE_KEYS.settings, settings);
+  applySettingsToUi();
+  setCurrentProject(settings.currentProject);
+  return true;
+}
+
 function cloudRecordId(record) {
   return [
     record.projectName,
@@ -716,6 +764,7 @@ async function refreshFromCloud() {
   }
   try {
     refreshCloudButton.disabled = true;
+    await refreshProjectsFromCloud();
     const result = await requestScript(buildCloudListUrl());
     const currentProject = getCurrentProject();
     const cloudRecords = (result.records || []).map((record) => ({
@@ -921,10 +970,11 @@ deleteProjectButton.addEventListener("click", () => {
   saveJson(STORAGE_KEYS.expenses, expenses);
   applySettingsToUi();
   setCurrentProject(settings.currentProject);
+  saveProjectsToCloud().catch(() => {});
   showToast("已刪除專案");
 });
 
-saveProjectButton.addEventListener("click", () => {
+saveProjectButton.addEventListener("click", async () => {
   if (saveProjectButton.disabled) return;
   const projectName = projectNameInput.value.trim();
   if (!projectName) {
@@ -959,6 +1009,7 @@ saveProjectButton.addEventListener("click", () => {
     },
   ];
   settings.currentProject = projectName;
+  const renamedProject = projectDialogMode === "edit" && originalProjectName && originalProjectName !== projectName;
   if (projectDialogMode === "edit" && originalProjectName && originalProjectName !== projectName) {
     expenses = expenses.map((expense) =>
       expense.projectName === originalProjectName ? { ...expense, projectName, projectCurrencies: normalizeCurrencies(selectedCurrencies) } : expense,
@@ -973,12 +1024,21 @@ saveProjectButton.addEventListener("click", () => {
   saveProjectButton.disabled = false;
   applySettingsToUi();
   setCurrentProject(projectName);
+  try {
+    if (renamedProject) {
+      await renameProjectOnCloud(originalProjectName, projectName);
+    }
+    await saveProjectsToCloud();
+  } catch (error) {
+    showToast("專案已儲存本機，Google Sheet 分頁/專案清單同步失敗");
+    return;
+  }
   showToast("\u5df2\u65b0\u589e\u65c5\u904a\u5c08\u6848");
 });
 
 settingsButton.addEventListener("click", () => settingsDialog.showModal());
 
-document.querySelector("#saveSettingsButton").addEventListener("click", () => {
+document.querySelector("#saveSettingsButton").addEventListener("click", async () => {
   const typedProjectNames = projectsInput.value
     .split(",")
     .map((name) => name.trim())
@@ -1003,7 +1063,17 @@ document.querySelector("#saveSettingsButton").addEventListener("click", () => {
   applySettingsToUi();
   render();
   settingsDialog.close();
-  showToast("設定已儲存");
+  try {
+    await refreshProjectsFromCloud();
+    showToast("設定已儲存，已載入雲端專案");
+  } catch {
+    try {
+      await saveProjectsToCloud();
+      showToast("設定已儲存，已建立雲端專案清單");
+    } catch {
+      showToast("設定已儲存，雲端專案清單尚未同步");
+    }
+  }
 });
 
 spentDateInput.value = todayDateValue();
