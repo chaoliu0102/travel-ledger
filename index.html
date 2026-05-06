@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260507-4" />
-    <link rel="icon" href="./icon.svg?v=20260507-4" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260507-6" />
+    <link rel="icon" href="./icon.svg?v=20260507-6" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260507-4" />
+    <link rel="stylesheet" href="./styles.css?v=20260507-6" />
   </head>
   <body>
     <main class="app-shell">
@@ -19,7 +19,11 @@
           <p class="kicker">Trip Ledger</p>
           <h1>說走就走 小帳本</h1>
         </div>
-        <button class="icon-button" id="settingsButton" type="button" aria-label="設定">設定</button>
+        <div class="top-actions">
+          <button class="icon-button share-action" id="shareButton" type="button" aria-label="分享" title="分享">⇪</button>
+          <button class="icon-button help-action" id="helpButton" type="button" aria-label="使用說明" title="使用說明">?</button>
+          <button class="icon-button settings-action" id="settingsButton" type="button" aria-label="設定" title="設定">⚙</button>
+        </div>
       </header>
 
       <section class="connection-banner" id="connectionBanner">
@@ -43,7 +47,6 @@
         <button class="tab is-active" type="button" data-view="entryView">記帳</button>
         <button class="tab" type="button" data-view="peopleView">個人明細</button>
         <button class="tab" type="button" data-view="statsView">統計</button>
-        <button class="tab" type="button" data-view="helpView">說明</button>
       </nav>
 
       <section class="status-strip">
@@ -58,7 +61,6 @@
         <div class="action-row">
           <button class="tool-button" id="syncButton" type="button" aria-label="同步" title="同步">↻</button>
           <button class="tool-button" id="refreshCloudButton" type="button" aria-label="雲端更新" title="雲端更新">☁</button>
-          <button class="tool-button" id="shareButton" type="button" aria-label="分享" title="分享">⇪</button>
         </div>
       </section>
 
@@ -154,37 +156,39 @@
         </section>
       </section>
 
-      <section class="view" id="helpView">
-        <section class="panel help-panel">
-          <div class="section-heading">
-            <h2>使用說明</h2>
-            <span class="subtle">旅途中快速記一筆即可</span>
-          </div>
-          <div class="help-list">
-            <article>
-              <strong>1. 選專案</strong>
-              <p>先確認上方旅遊專案正確。不同旅程會寫入不同 Google Sheet 分頁。</p>
-            </article>
-            <article>
-              <strong>2. 記消費</strong>
-              <p>填日期、店家、摘要、支付方式、幣別、金額、購買人與付款人後送出。</p>
-            </article>
-            <article>
-              <strong>3. 看分帳</strong>
-              <p>個人明細可看每個人的消費紀錄；統計頁可看總消費與代墊是否結清。</p>
-            </article>
-            <article>
-              <strong>4. 同步資料</strong>
-              <p>按同步會把本機待同步資料送到 Google Sheet；按雲端更新會抓回最新資料與專案清單。</p>
-            </article>
-            <article>
-              <strong>5. 結清或修改</strong>
-              <p>逐筆明細可勾選代墊已結清，也可編輯或刪除已記錄的消費。</p>
-            </article>
-          </div>
-        </section>
-      </section>
     </main>
+
+    <dialog class="settings-dialog" id="helpDialog">
+      <form method="dialog" class="settings-panel help-panel">
+        <div class="section-heading">
+          <h2>使用說明</h2>
+          <button class="icon-button" value="close" type="submit" aria-label="關閉">關閉</button>
+        </div>
+        <p class="hint">旅途中快速記一筆即可，資料會依旅遊專案同步到對應的 Google Sheet 分頁。</p>
+        <div class="help-list">
+          <article>
+            <strong>1. 選專案</strong>
+            <p>先確認上方旅遊專案正確。不同旅程會寫入不同 Google Sheet 分頁。</p>
+          </article>
+          <article>
+            <strong>2. 記消費</strong>
+            <p>填日期、店家、摘要、支付方式、幣別、金額、購買人與付款人後送出。</p>
+          </article>
+          <article>
+            <strong>3. 看分帳</strong>
+            <p>個人明細可看每個人的消費紀錄；統計頁可看總消費與代墊是否結清。</p>
+          </article>
+          <article>
+            <strong>4. 同步資料</strong>
+            <p>按同步會把本機待同步資料送到 Google Sheet；按雲端更新會抓回最新資料與專案清單。</p>
+          </article>
+          <article>
+            <strong>5. 結清或修改</strong>
+            <p>逐筆明細可勾選代墊已結清，也可編輯或刪除已記錄的消費。</p>
+          </article>
+        </div>
+      </form>
+    </dialog>
 
     <dialog class="settings-dialog" id="settingsDialog">
       <form method="dialog" class="settings-panel">
@@ -239,6 +243,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260507-4" type="module"></script>
+    <script src="./app.js?v=20260507-6" type="module"></script>
   </body>
 </html>

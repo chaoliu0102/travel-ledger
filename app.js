@@ -35,8 +35,10 @@ const DEFAULT_SETTINGS = {
 
 const form = document.querySelector("#expenseForm");
 const settingsDialog = document.querySelector("#settingsDialog");
+const helpDialog = document.querySelector("#helpDialog");
 const projectDialog = document.querySelector("#projectDialog");
 const settingsButton = document.querySelector("#settingsButton");
+const helpButton = document.querySelector("#helpButton");
 const spentDateInput = document.querySelector("#spentDate");
 const amountInput = document.querySelector("#amount");
 const buyerInput = document.querySelector("#buyer");
@@ -1158,6 +1160,7 @@ saveProjectButton.addEventListener("click", async () => {
 });
 
 settingsButton.addEventListener("click", () => settingsDialog.showModal());
+helpButton.addEventListener("click", () => helpDialog.showModal());
 
 document.querySelector("#saveSettingsButton").addEventListener("click", async () => {
   settings = normalizeSettings({

@@ -53,6 +53,7 @@ button:disabled {
 }
 
 .topbar,
+.top-actions,
 .project-bar,
 .connection-banner,
 .status-strip,
@@ -95,13 +96,19 @@ h2 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin-bottom: 12px;
   padding: 5px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--mist);
+}
+
+.top-actions {
+  gap: 7px;
+  flex: 0 0 auto;
+  justify-content: flex-end;
 }
 
 .project-bar {
@@ -457,6 +464,34 @@ h2 {
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
+}
+
+.top-actions .icon-button {
+  width: 40px;
+  height: 40px;
+  flex-basis: 40px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.top-actions .icon-button:hover {
+  filter: brightness(0.97);
+}
+
+.top-actions .share-action {
+  background: #d8c9bd;
+}
+
+.top-actions .help-action {
+  background: #cfd8cf;
+}
+
+.top-actions .settings-action {
+  background: #d7d7cc;
 }
 
 .text-button {
