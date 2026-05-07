@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260507-9" />
-    <link rel="icon" href="./icon.svg?v=20260507-9" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260507-11" />
+    <link rel="icon" href="./icon.svg?v=20260507-11" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260507-9" />
+    <link rel="stylesheet" href="./styles.css?v=20260507-11" />
   </head>
   <body>
     <main class="app-shell">
@@ -125,13 +125,15 @@
           </div>
         </form>
 
-        <section class="list-section">
-          <div class="section-heading">
+        <details class="list-section recent-section" open>
+          <summary class="section-heading">
             <h2>最近紀錄</h2>
-            <button class="text-button" id="clearSyncedButton" type="button">清除已同步</button>
-          </div>
+            <span class="summary-actions">
+              <button class="text-button" id="clearSyncedButton" type="button">清除本機已同步</button>
+            </span>
+          </summary>
           <div class="expense-list" id="recentList"></div>
-        </section>
+        </details>
       </section>
 
       <section class="view" id="peopleView">
@@ -243,6 +245,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260507-9" type="module"></script>
+    <script src="./app.js?v=20260507-11" type="module"></script>
   </body>
 </html>

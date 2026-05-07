@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   expenses: "travel-split.expenses",
   settings: "travel-split.settings",
+  activities: "travel-split.activities",
 };
 
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
@@ -82,6 +83,7 @@ let editingExpenseId = "";
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
+let activities = loadJson(STORAGE_KEYS.activities, []);
 expenses = expenses.map((expense) => ({
   ...expense,
   id: expense.id || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`),
@@ -90,6 +92,7 @@ expenses = expenses.map((expense) => ({
 }));
 saveJson(STORAGE_KEYS.settings, settings);
 saveJson(STORAGE_KEYS.expenses, expenses);
+saveJson(STORAGE_KEYS.activities, activities);
 
 function loadJson(key, fallback) {
   try {
@@ -182,6 +185,13 @@ function formatMoney(value, currency) {
   return `${prefix}${new Intl.NumberFormat("zh-TW", {
     maximumFractionDigits: currency === "TWD" || currency === "JPY" || currency === "KRW" ? 0 : 2,
   }).format(number)}`;
+}
+
+function formatShortDateTime(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (number) => String(number).padStart(2, "0");
+  return `${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function formatTotals(totals, currencies = getCurrentProject().currencies) {
@@ -556,6 +566,41 @@ function buildExpense(formData) {
   };
 }
 
+function mutationLabel(type) {
+  if (type === "update") return "修改";
+  if (type === "delete") return "刪除";
+  return "新增";
+}
+
+function activityFromExpense(expense, type) {
+  return {
+    id: `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    expenseId: expense.id,
+    projectName: expense.projectName,
+    type,
+    timestamp: new Date().toISOString(),
+    date: expense.sheetDate || formatDateForSheet(expense.date || todayDateValue()),
+    merchant: expense.merchant || "",
+    summary: expense.summary || "",
+    currency: expense.currency,
+    amount: Number(expense.amount || 0),
+    status: expense.status || "pending",
+  };
+}
+
+function recordActivity(type, expense) {
+  const activity = activityFromExpense(expense, type);
+  activities = [activity, ...activities].slice(0, 80);
+  saveJson(STORAGE_KEYS.activities, activities);
+  return activity.id;
+}
+
+function updateActivityStatus(activityId, status) {
+  if (!activityId) return;
+  activities = activities.map((activity) => (activity.id === activityId ? { ...activity, status } : activity));
+  saveJson(STORAGE_KEYS.activities, activities);
+}
+
 function totalsFor(records, currencies = getCurrentProject().currencies) {
   return records.reduce((totals, expense) => {
     addToTotals(totals, expense.currency, expense.amount);
@@ -634,6 +679,50 @@ function renderExpenseList(container, records) {
       </div>
     `;
     container.append(item);
+  }
+}
+
+function renderRecentActivities() {
+  const currentProject = getCurrentProject();
+  const projectActivities = activities.filter((activity) => activity.projectName === currentProject.name);
+  const activityExpenseIds = new Set(projectActivities.map((activity) => activity.expenseId));
+  const fallbackActivities = getCurrentExpenses()
+    .filter((expense) => !activityExpenseIds.has(expense.id))
+    .map((expense) => ({
+      ...activityFromExpense(expense, expense.syncMode === "update" ? "update" : "create"),
+      id: `fallback-${expense.id}`,
+      timestamp: expense.updatedAt || expense.syncedAt || expense.createdAt || new Date().toISOString(),
+    }));
+  const recentActivities = [...projectActivities, ...fallbackActivities]
+    .sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)))
+    .slice(0, 10);
+
+  recentList.innerHTML = "";
+  if (!recentActivities.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = "尚無近期異動";
+    recentList.append(empty);
+    return;
+  }
+
+  for (const activity of recentActivities) {
+    const currentExpense = expenses.find((expense) => expense.id === activity.expenseId);
+    const status = currentExpense?.status || activity.status || "synced";
+    const statusClass = status === "synced" ? "synced" : status === "error" ? "error" : "pending";
+    const row = document.createElement("article");
+    row.className = `recent-activity activity-${activity.type}`;
+    row.innerHTML = `
+      <div class="recent-time">${formatShortDateTime(activity.timestamp)}</div>
+      <div class="recent-main">
+        <strong>${activity.merchant || "未填店家"}</strong>
+        <span>${activity.summary || "未填品項"}</span>
+      </div>
+      <strong class="recent-amount">${formatMoney(activity.amount, activity.currency)}</strong>
+      <span class="status-pill status-${statusClass}">${statusClass === "synced" ? "已同步" : statusClass === "error" ? "待重試" : "待同步"}</span>
+      <span class="mutation-pill">${mutationLabel(activity.type)}</span>
+    `;
+    recentList.append(row);
   }
 }
 
@@ -728,10 +817,7 @@ function render() {
     (expense) => expense.status !== "synced" || expense.syncMode === "sent",
   ).length;
 
-  renderExpenseList(
-    recentList,
-    [...currentExpenses].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 12),
-  );
+  renderRecentActivities();
   renderPersonView();
   renderStats();
 }
@@ -988,6 +1074,7 @@ form.addEventListener("submit", async (event) => {
   } else {
     expenses = [expense, ...expenses];
   }
+  recordActivity(wasEditing ? "update" : "create", expense);
   saveJson(STORAGE_KEYS.expenses, expenses);
   render();
   resetExpenseForm();
@@ -1020,14 +1107,34 @@ shareButton.addEventListener("click", async () => {
   }
 });
 
-document.querySelector("#clearSyncedButton").addEventListener("click", () => {
+document.querySelector("#clearSyncedButton").addEventListener("click", async () => {
+  if (!settings.endpointUrl) {
+    showToast("尚未設定 Apps Script URL，無法重新載入雲端資料");
+    return;
+  }
   const currentProject = getCurrentProject();
-  expenses = expenses.filter(
-    (expense) => expense.projectName !== currentProject.name || expense.status !== "synced" || expense.syncMode === "sent",
-  );
-  saveJson(STORAGE_KEYS.expenses, expenses);
-  render();
-  showToast("已清除本機已同步紀錄");
+  const pendingCount = expenses.filter(
+    (expense) => expense.projectName === currentProject.name && (expense.status !== "synced" || expense.syncMode === "sent"),
+  ).length;
+  if (pendingCount) {
+    showToast("仍有待同步資料，請先同步後再清除本機暫存");
+    return;
+  }
+
+  try {
+    document.querySelector("#clearSyncedButton").disabled = true;
+    await refreshFromCloud();
+    expenses = expenses.filter(
+      (expense) => expense.projectName !== currentProject.name || expense.status !== "synced" || expense.syncMode === "sent",
+    );
+    saveJson(STORAGE_KEYS.expenses, expenses);
+    await refreshFromCloud();
+    showToast("已清除本機暫存，並重新載入雲端資料");
+  } catch (error) {
+    showToast(error.message || "無法重新載入雲端資料，已保留本機資料");
+  } finally {
+    document.querySelector("#clearSyncedButton").disabled = false;
+  }
 });
 
 async function handleExpenseListAction(event) {
@@ -1045,6 +1152,7 @@ async function handleExpenseListAction(event) {
   if (action === "toggle-settled") {
     const updated = { ...expense, settled: event.target.checked, status: "pending", syncMode: "update", updatedAt: new Date().toISOString() };
     expenses = expenses.map((record) => (record.id === updated.id ? updated : record));
+    recordActivity("update", updated);
     saveJson(STORAGE_KEYS.expenses, expenses);
     render();
     try {
@@ -1063,20 +1171,22 @@ async function handleExpenseListAction(event) {
 
   if (action === "delete-expense") {
     if (!window.confirm("確定刪除這筆消費？")) return;
+    const activityId = recordActivity("delete", { ...expense, status: "pending" });
     expenses = expenses.filter((record) => record.id !== expense.id);
     saveJson(STORAGE_KEYS.expenses, expenses);
     render();
     try {
       await deleteExpenseOnSheet(expense);
+      updateActivityStatus(activityId, "synced");
       showToast("已刪除");
     } catch (error) {
+      updateActivityStatus(activityId, "error");
       showToast("本機已刪除，雲端刪除失敗：" + error.message);
     }
+    render();
   }
 }
 
-recentList.addEventListener("click", handleExpenseListAction);
-recentList.addEventListener("change", handleExpenseListAction);
 personList.addEventListener("click", handleExpenseListAction);
 personList.addEventListener("change", handleExpenseListAction);
 
