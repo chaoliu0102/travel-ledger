@@ -372,33 +372,6 @@ function getCurrentExpenses() {
   return expenses.filter((expense) => expense.projectName === currentProject.name);
 }
 
-function peopleFromRecords(records) {
-  const people = [];
-  for (const record of records) {
-    for (const name of [record.buyer, record.payer]) {
-      const normalized = String(name || "").trim();
-      if (normalized && !people.includes(normalized)) people.push(normalized);
-    }
-  }
-  return people;
-}
-
-function mergeCurrentProjectPeople(records) {
-  const currentProject = getCurrentProject();
-  const cloudPeople = peopleFromRecords(records);
-  if (!cloudPeople.length) return;
-  settings.projects = getProjects().map((project) => {
-    if (project.name !== currentProject.name) return project;
-    return {
-      ...project,
-      people: normalizeList([...project.people, ...cloudPeople], cloudPeople),
-    };
-  });
-  settings = normalizeSettings(settings);
-  saveJson(STORAGE_KEYS.settings, settings);
-  applySettingsToUi();
-}
-
 function setCurrentProject(projectName) {
   settings.currentProject = projectName;
   saveJson(STORAGE_KEYS.settings, settings);
@@ -1027,8 +1000,6 @@ async function refreshFromCloud(options = {}) {
       status: "synced",
       syncMode: "cloud",
     }));
-    mergeCurrentProjectPeople(cloudRecords);
-    saveProjectsToCloud().catch(() => {});
     const localOnly = expenses.filter((expense) => expense.projectName !== currentProject.name || expense.status !== "synced");
     expenses = [...localOnly, ...cloudRecords];
     saveJson(STORAGE_KEYS.expenses, expenses);

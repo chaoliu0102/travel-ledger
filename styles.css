@@ -511,6 +511,44 @@ h2 {
   margin-bottom: 10px;
 }
 
+.recent-section {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.72);
+  padding: 12px;
+}
+
+.recent-section summary {
+  cursor: pointer;
+  list-style: none;
+  margin-bottom: 0;
+}
+
+.recent-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.recent-section summary::before {
+  content: "▾";
+  color: var(--sage-deep);
+  font-weight: 900;
+}
+
+.recent-section:not([open]) summary::before {
+  content: "▸";
+}
+
+.summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.recent-section[open] .expense-list {
+  margin-top: 10px;
+}
+
 .expense-list,
 .settlement-list,
 .stats-grid {
@@ -530,6 +568,66 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 253, 249, 0.88);
+}
+
+.recent-activity {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 249, 0.88);
+}
+
+.recent-time {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.recent-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.recent-main strong,
+.recent-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-main span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.recent-amount {
+  white-space: nowrap;
+}
+
+.mutation-pill {
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e8dfd6;
+  color: var(--ink);
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.activity-update .mutation-pill {
+  background: #d7d7cc;
+}
+
+.activity-delete .mutation-pill {
+  background: rgba(185, 134, 134, 0.18);
+  color: #8f4d4d;
 }
 
 .expense-side {
@@ -762,6 +860,20 @@ h2 {
 
   .expense-item {
     grid-template-columns: 1fr;
+  }
+
+  .recent-activity {
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+  }
+
+  .recent-activity .status-pill {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .recent-activity .mutation-pill {
+    grid-column: 3;
+    grid-row: 2;
   }
 
   .expense-side {
