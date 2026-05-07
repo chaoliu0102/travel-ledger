@@ -80,6 +80,7 @@ let deferredInstallPrompt = null;
 let projectDialogMode = "create";
 let originalProjectName = "";
 let editingExpenseId = "";
+let autoRefreshTimer = 0;
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
@@ -405,6 +406,14 @@ function setCurrentProject(projectName) {
   fillPeopleSelects();
   fillCurrencyOptions();
   render();
+}
+
+function scheduleProjectCloudRefresh() {
+  if (!settings.endpointUrl || !navigator.onLine) return;
+  window.clearTimeout(autoRefreshTimer);
+  autoRefreshTimer = window.setTimeout(() => {
+    refreshFromCloud({ silent: true }).catch(() => {});
+  }, 180);
 }
 
 function makeCurrencyTotals(currencies = getCurrentProject().currencies) {
@@ -997,9 +1006,9 @@ function cloudRecordId(record) {
   ].join("|");
 }
 
-async function refreshFromCloud() {
+async function refreshFromCloud(options = {}) {
   if (!settings.endpointUrl) {
-    showToast("尚未設定 Apps Script Web App URL");
+    if (!options.silent) showToast("尚未設定 Apps Script Web App URL");
     return;
   }
   try {
@@ -1024,9 +1033,9 @@ async function refreshFromCloud() {
     expenses = [...localOnly, ...cloudRecords];
     saveJson(STORAGE_KEYS.expenses, expenses);
     render();
-    showToast(`已更新雲端資料 ${cloudRecords.length} 筆`);
+    if (!options.silent) showToast(`已更新雲端資料 ${cloudRecords.length} 筆`);
   } catch (error) {
-    showToast(error.message);
+    if (!options.silent) showToast(error.message);
   } finally {
     refreshCloudButton.disabled = false;
   }
@@ -1202,6 +1211,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
 personFilter.addEventListener("change", renderPersonView);
 projectSelect.addEventListener("change", () => {
   setCurrentProject(projectSelect.value);
+  scheduleProjectCloudRefresh();
 });
 
 function openProjectDialog(mode) {
