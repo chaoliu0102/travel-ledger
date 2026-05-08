@@ -336,11 +336,26 @@ h2 {
   display: none;
 }
 
+#adminShareLinkField[hidden] {
+  display: none;
+}
+
 .admin-note {
   color: #8f6d31;
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.55;
+}
+
+.admin-inline-message {
+  color: #a94f4f;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.admin-inline-message[hidden] {
+  display: none;
 }
 
 .setup-actions {

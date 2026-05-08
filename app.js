@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260509-10";
+const APP_VERSION = "20260509-12";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -49,6 +49,9 @@ const endpointUrlInput = document.querySelector("#endpointUrl");
 const unlockEndpointButton = document.querySelector("#unlockEndpointButton");
 const adminSetupPanel = document.querySelector("#adminSetupPanel");
 const adminEndpointInput = document.querySelector("#adminEndpointInput");
+const adminInlineMessage = document.querySelector("#adminInlineMessage");
+const adminShareLinkField = document.querySelector("#adminShareLinkField");
+const adminShareLinkOutput = document.querySelector("#adminShareLinkOutput");
 const saveAdminEndpointButton = document.querySelector("#saveAdminEndpointButton");
 const copyAdminLinkButton = document.querySelector("#copyAdminLinkButton");
 const projectSelect = document.querySelector("#projectSelect");
@@ -134,6 +137,18 @@ function cleanSetupUrl() {
   url.searchParams.delete("endpoint");
   if (!adminSetupMode) url.searchParams.delete("setup");
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function showAdminShareLink(url) {
+  adminShareLinkOutput.value = url;
+  adminShareLinkField.hidden = false;
+  adminShareLinkOutput.focus();
+  adminShareLinkOutput.select();
+}
+
+function setAdminInlineMessage(message) {
+  adminInlineMessage.textContent = message || "";
+  adminInlineMessage.hidden = !message;
 }
 
 function applyEndpointUrl(endpointUrl, options = {}) {
@@ -798,6 +813,10 @@ function applySettingsToUi() {
   setEndpointEditMode(endpointUnlocked);
   adminSetupPanel.hidden = !adminSetupMode;
   adminEndpointInput.value = settings.endpointUrl;
+  if (!adminSetupMode) {
+    adminShareLinkField.hidden = true;
+    setAdminInlineMessage("");
+  }
   fillPeopleSelects();
   fillProjectSelect();
   fillCurrencyOptions();
@@ -1626,20 +1645,24 @@ saveAdminEndpointButton.addEventListener("click", async () => {
 });
 
 copyAdminLinkButton.addEventListener("click", async () => {
+  setAdminInlineMessage("");
   const endpointUrl = adminEndpointInput.value.trim() || settings.endpointUrl;
   if (!isValidEndpointUrl(endpointUrl)) {
-    showToast("請先輸入有效的 Apps Script Web App URL", "warning");
+    setAdminInlineMessage("請先輸入有效的 Apps Script URL");
     return;
   }
   const url = new URL(window.location.href);
   url.searchParams.delete("setup");
   url.searchParams.set("v", APP_VERSION);
   url.searchParams.set("endpoint", endpointUrl);
+  const shareUrl = url.toString();
+  showAdminShareLink(shareUrl);
+  cleanSetupUrl();
   try {
-    await navigator.clipboard.writeText(url.toString());
-    showToast("已複製初始化連結");
+    await navigator.clipboard.writeText(shareUrl);
+    setAdminInlineMessage("已複製初始化連結；若無法貼上，請改複製下方連結。");
   } catch {
-    showToast("請手動複製網址列中的初始化連結", "warning");
+    setAdminInlineMessage("瀏覽器未允許自動複製，請手動複製下方連結。");
   }
 });
 
