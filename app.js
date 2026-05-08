@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260508-17";
+const APP_VERSION = "20260509-1";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -76,6 +76,7 @@ const toast = document.querySelector("#toast");
 const versionInfo = document.querySelector("#versionInfo");
 const versionWarning = document.querySelector("#versionWarning");
 const openLatestVersionButton = document.querySelector("#openLatestVersionButton");
+const debugProjectsButton = document.querySelector("#debugProjectsButton");
 const connectionBanner = document.querySelector("#connectionBanner");
 const connectionStatus = document.querySelector("#connectionStatus");
 const installButton = document.querySelector("#installButton");
@@ -1043,6 +1044,14 @@ function buildCloudProjectsUrl() {
   return buildEndpointUrl(params);
 }
 
+function buildDebugProjectsUrl() {
+  const params = new URLSearchParams({
+    action: "debugProjects",
+    ts: String(Date.now()),
+  });
+  return buildEndpointUrl(params);
+}
+
 async function saveProjectsToCloud() {
   if (!settings.endpointUrl) return;
   const params = new URLSearchParams({
@@ -1495,6 +1504,21 @@ document.querySelector("#saveSettingsButton").addEventListener("click", async ()
 });
 
 importProjectButton.addEventListener("click", importProjectFromCloud);
+debugProjectsButton.addEventListener("click", async () => {
+  if (!settings.endpointUrl) {
+    showToast("尚未設定 Apps Script URL");
+    return;
+  }
+  try {
+    const result = await requestScript(buildDebugProjectsUrl());
+    const text = JSON.stringify(result, null, 2);
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+    console.log("debugProjects", result);
+    showToast("診斷結果已複製，請貼給我查看");
+  } catch (error) {
+    showToast(error.message || "診斷失敗");
+  }
+});
 openLatestVersionButton.addEventListener("click", () => {
   openLatestVersion().catch(() => {
     showToast("無法自動開啟，請重新整理或清除瀏覽器快取");
