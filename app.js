@@ -1338,6 +1338,10 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-initializeEndpointUrlFromSheet().then((updated) => {
-  if (updated) refreshProjectsFromCloud().catch(() => {});
-});
+async function initializeCloudState() {
+  await initializeEndpointUrlFromSheet();
+  if (!settings.endpointUrl || !navigator.onLine) return;
+  await refreshFromCloud({ silent: true });
+}
+
+initializeCloudState().catch(() => {});
