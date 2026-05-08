@@ -4,6 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
+const APP_VERSION = "20260508-14";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -72,6 +73,9 @@ const personList = document.querySelector("#personList");
 const statsGrid = document.querySelector("#statsGrid");
 const settlementList = document.querySelector("#settlementList");
 const toast = document.querySelector("#toast");
+const versionInfo = document.querySelector("#versionInfo");
+const versionWarning = document.querySelector("#versionWarning");
+const openLatestVersionButton = document.querySelector("#openLatestVersionButton");
 const connectionBanner = document.querySelector("#connectionBanner");
 const connectionStatus = document.querySelector("#connectionStatus");
 const installButton = document.querySelector("#installButton");
@@ -230,6 +234,49 @@ function updateConnectionStatus() {
   const online = navigator.onLine;
   connectionBanner.classList.toggle("is-offline", !online);
   connectionStatus.textContent = online ? "連線正常" : "離線中，資料會先保存在本機";
+}
+
+function updateVersionInfo() {
+  const urlVersion = new URLSearchParams(window.location.search).get("v");
+  versionInfo.textContent = `目前版本：${APP_VERSION}｜最新版本：檢查中｜網址參數：${urlVersion || "未帶參數"}`;
+  checkLatestVersion(urlVersion).catch(() => {
+    versionInfo.textContent = `目前版本：${APP_VERSION}｜最新版本：檢查失敗｜網址參數：${urlVersion || "未帶參數"}`;
+  });
+}
+
+async function fetchLatestAppVersion() {
+  const response = await fetch(`./app.js?version-check=${Date.now()}`, { cache: "no-store" });
+  const source = await response.text();
+  const match = source.match(/const\s+APP_VERSION\s*=\s*"([^"]+)"/);
+  return match ? match[1] : "";
+}
+
+async function checkLatestVersion(urlVersion) {
+  const latestVersion = await fetchLatestAppVersion();
+  versionInfo.textContent = `目前版本：${APP_VERSION}｜最新版本：${latestVersion || "未知"}｜網址參數：${urlVersion || "未帶參數"}`;
+  const isOutdated = latestVersion && latestVersion !== APP_VERSION;
+  versionWarning.hidden = !isOutdated;
+  openLatestVersionButton.hidden = !isOutdated;
+  if (isOutdated) {
+    versionWarning.textContent = `目前開啟的版本不是最新版本，請開啟 ${latestVersion}。`;
+    openLatestVersionButton.dataset.latestVersion = latestVersion;
+  }
+}
+
+async function openLatestVersion() {
+  const latestVersion = openLatestVersionButton.dataset.latestVersion || APP_VERSION;
+  if ("serviceWorker" in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+  }
+  if (window.caches) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("v", latestVersion);
+  url.searchParams.set("refresh", String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 function buildEndpointUrl(params) {
@@ -1453,11 +1500,17 @@ document.querySelector("#saveSettingsButton").addEventListener("click", async ()
 });
 
 importProjectButton.addEventListener("click", importProjectFromCloud);
+openLatestVersionButton.addEventListener("click", () => {
+  openLatestVersion().catch(() => {
+    showToast("無法自動開啟，請重新整理或清除瀏覽器快取");
+  });
+});
 
 spentDateInput.value = todayDateValue();
 applySettingsToUi();
 render();
 updateConnectionStatus();
+updateVersionInfo();
 window.addEventListener("online", updateConnectionStatus);
 window.addEventListener("offline", updateConnectionStatus);
 window.addEventListener("beforeinstallprompt", (event) => {

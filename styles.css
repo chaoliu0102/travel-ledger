@@ -860,6 +860,24 @@ h2 {
   line-height: 1.55;
 }
 
+.version-note {
+  padding-top: 2px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.version-warning {
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(185, 95, 95, 0.12);
+  color: #a94f4f;
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
 .help-panel {
   box-shadow: var(--shadow);
 }
