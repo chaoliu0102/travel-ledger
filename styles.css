@@ -67,9 +67,15 @@ button:disabled {
 }
 
 .topbar {
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+}
+
+.topbar > div:first-child {
+  min-width: 0;
+  flex: 1 1 260px;
 }
 
 .kicker {
@@ -575,8 +581,15 @@ h2 {
 
 .sync-text-button {
   min-height: 40px;
-  padding: 0 2px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #d7d7cc;
+  color: var(--ink);
   white-space: nowrap;
+}
+
+.sync-text-button:hover {
+  background: #c9d5d6;
 }
 
 .list-section,
@@ -899,6 +912,26 @@ h2 {
 }
 
 @media (max-width: 620px) {
+  .topbar {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .topbar > div:first-child {
+    flex-basis: 100%;
+  }
+
+  .top-actions {
+    width: 100%;
+  }
+
+  .top-actions .icon-button {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 0.92rem;
+  }
+
   .status-strip,
   .project-bar,
   .grid-2,
