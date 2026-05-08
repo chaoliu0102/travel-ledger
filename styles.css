@@ -323,6 +323,32 @@ h2 {
   gap: 8px;
 }
 
+.admin-setup {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(185, 156, 99, 0.48);
+  border-radius: 8px;
+  background: rgba(227, 206, 144, 0.18);
+}
+
+.admin-setup[hidden] {
+  display: none;
+}
+
+.admin-note {
+  color: #8f6d31;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.setup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .check-field {
   display: flex;
   align-items: center;
@@ -1037,6 +1063,10 @@ h2 {
     display: flex;
     justify-content: flex-end;
     width: auto;
+  }
+
+  .setup-actions {
+    grid-template-columns: 1fr;
   }
 
   .primary-button {

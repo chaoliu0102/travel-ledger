@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260509-8" />
-    <link rel="icon" href="./icon.svg?v=20260509-8" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260509-10" />
+    <link rel="icon" href="./icon.svg?v=20260509-10" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260509-8" />
+    <link rel="stylesheet" href="./styles.css?v=20260509-10" />
   </head>
   <body>
     <main class="app-shell">
@@ -206,6 +206,17 @@
             <button class="tool-button" id="unlockEndpointButton" type="button" aria-label="編輯同步來源" title="編輯同步來源">✎</button>
           </div>
         </label>
+        <div class="admin-setup" id="adminSetupPanel" hidden>
+          <label class="field">
+            <span>管理員初始化 URL</span>
+            <input id="adminEndpointInput" type="url" placeholder="貼上新的 Apps Script Web App URL" />
+          </label>
+          <p class="admin-note">套用到此裝置會改變目前 APP 的同步來源；若只是要分享給他人，請直接複製初始化連結。</p>
+          <div class="setup-actions">
+            <button class="secondary-button" id="saveAdminEndpointButton" type="button">套用到此裝置</button>
+            <button class="secondary-button" id="copyAdminLinkButton" type="button">複製初始化連結</button>
+          </div>
+        </div>
         <button class="primary-button" id="saveSettingsButton" type="button">儲存設定</button>
         <p class="hint">同一個 Apps Script URL 可給旅伴共用。APP 會嘗試從 Google Sheet 自動帶入最新 URL；每台手機會先暫存在本機，再同步到同一份 Google Sheet。</p>
         <p class="version-note" id="versionInfo">目前版本：讀取中</p>
@@ -250,6 +261,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260509-8" type="module"></script>
+    <script src="./app.js?v=20260509-10" type="module"></script>
   </body>
 </html>

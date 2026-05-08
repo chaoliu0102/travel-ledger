@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260509-8";
+const APP_VERSION = "20260509-10";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -47,6 +47,10 @@ const buyerInput = document.querySelector("#buyer");
 const payerInput = document.querySelector("#payer");
 const endpointUrlInput = document.querySelector("#endpointUrl");
 const unlockEndpointButton = document.querySelector("#unlockEndpointButton");
+const adminSetupPanel = document.querySelector("#adminSetupPanel");
+const adminEndpointInput = document.querySelector("#adminEndpointInput");
+const saveAdminEndpointButton = document.querySelector("#saveAdminEndpointButton");
+const copyAdminLinkButton = document.querySelector("#copyAdminLinkButton");
 const projectSelect = document.querySelector("#projectSelect");
 const addProjectButton = document.querySelector("#addProjectButton");
 const editProjectButton = document.querySelector("#editProjectButton");
@@ -93,6 +97,7 @@ let editingPersonError = "";
 let cloudLoadingCount = 0;
 let endpointUnlocked = false;
 let projectSelectionConfirmed = false;
+let adminSetupMode = new URLSearchParams(window.location.search).get("setup") === "1";
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
@@ -119,6 +124,47 @@ function loadJson(key, fallback) {
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
+
+function isValidEndpointUrl(url) {
+  return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(String(url || "").trim());
+}
+
+function cleanSetupUrl() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete("endpoint");
+  if (!adminSetupMode) url.searchParams.delete("setup");
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+function applyEndpointUrl(endpointUrl, options = {}) {
+  const nextUrl = String(endpointUrl || "").trim();
+  if (!isValidEndpointUrl(nextUrl)) {
+    if (!options.silent) showToast("請輸入有效的 Apps Script Web App URL", "warning");
+    return false;
+  }
+  settings = normalizeSettings({
+    ...settings,
+    endpointUrl: nextUrl,
+  });
+  saveJson(STORAGE_KEYS.settings, settings);
+  setEndpointEditMode(false);
+  applySettingsToUi();
+  if (!options.silent) showToast("已儲存同步來源");
+  return true;
+}
+
+function initializeEndpointFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const endpointUrl = params.get("endpoint");
+  if (!endpointUrl) return;
+  if (applyEndpointUrl(endpointUrl, { silent: true })) {
+    cleanSetupUrl();
+  } else {
+    adminSetupMode = true;
+  }
+}
+
+initializeEndpointFromUrl();
 
 function normalizeList(value, fallback) {
   const items = Array.isArray(value) ? value : [];
@@ -418,7 +464,7 @@ async function initializeEndpointUrlFromSheet() {
     } catch {
       latestUrl = "";
     }
-    if (!latestUrl) latestUrl = await fetchLatestEndpointFromSheet();
+    if (!latestUrl && !settings.endpointUrl) latestUrl = await fetchLatestEndpointFromSheet();
     if (!latestUrl || latestUrl === settings.endpointUrl) return false;
     settings = normalizeSettings({
       ...settings,
@@ -734,13 +780,14 @@ function endpointDisplayValue() {
 }
 
 function setEndpointEditMode(unlocked) {
-  endpointUnlocked = unlocked;
-  endpointUrlInput.readOnly = !unlocked;
-  endpointUrlInput.type = unlocked ? "url" : "text";
-  endpointUrlInput.value = unlocked ? settings.endpointUrl : endpointDisplayValue();
-  unlockEndpointButton.textContent = unlocked ? "鎖" : "✎";
-  unlockEndpointButton.setAttribute("aria-label", unlocked ? "鎖定同步來源" : "編輯同步來源");
-  unlockEndpointButton.title = unlocked ? "鎖定同步來源" : "編輯同步來源";
+  endpointUnlocked = adminSetupMode && unlocked;
+  endpointUrlInput.readOnly = !endpointUnlocked;
+  endpointUrlInput.type = endpointUnlocked ? "url" : "text";
+  endpointUrlInput.value = endpointUnlocked ? settings.endpointUrl : endpointDisplayValue();
+  unlockEndpointButton.hidden = !adminSetupMode;
+  unlockEndpointButton.textContent = endpointUnlocked ? "鎖" : "✎";
+  unlockEndpointButton.setAttribute("aria-label", endpointUnlocked ? "鎖定同步來源" : "編輯同步來源");
+  unlockEndpointButton.title = endpointUnlocked ? "鎖定同步來源" : "編輯同步來源";
 }
 
 function getEndpointUrlFromSettingsForm() {
@@ -749,6 +796,8 @@ function getEndpointUrlFromSettingsForm() {
 
 function applySettingsToUi() {
   setEndpointEditMode(endpointUnlocked);
+  adminSetupPanel.hidden = !adminSetupMode;
+  adminEndpointInput.value = settings.endpointUrl;
   fillPeopleSelects();
   fillProjectSelect();
   fillCurrencyOptions();
@@ -1560,6 +1609,38 @@ unlockEndpointButton.addEventListener("click", () => {
   setEndpointEditMode(true);
   endpointUrlInput.focus();
   endpointUrlInput.select();
+});
+
+saveAdminEndpointButton.addEventListener("click", async () => {
+  if (!applyEndpointUrl(adminEndpointInput.value)) return;
+  adminSetupMode = false;
+  cleanSetupUrl();
+  applySettingsToUi();
+  settingsDialog.close();
+  try {
+    const loaded = await refreshProjectsFromCloud();
+    showToast(loaded ? "初始化完成，已載入雲端專案" : "初始化完成");
+  } catch {
+    showToast("初始化完成，雲端專案清單尚未同步");
+  }
+});
+
+copyAdminLinkButton.addEventListener("click", async () => {
+  const endpointUrl = adminEndpointInput.value.trim() || settings.endpointUrl;
+  if (!isValidEndpointUrl(endpointUrl)) {
+    showToast("請先輸入有效的 Apps Script Web App URL", "warning");
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.delete("setup");
+  url.searchParams.set("v", APP_VERSION);
+  url.searchParams.set("endpoint", endpointUrl);
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    showToast("已複製初始化連結");
+  } catch {
+    showToast("請手動複製網址列中的初始化連結", "warning");
+  }
 });
 
 document.querySelector("#saveSettingsButton").addEventListener("click", async () => {
