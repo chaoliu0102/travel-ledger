@@ -1028,7 +1028,6 @@ async function refreshProjectsFromCloud() {
   const result = await requestScript(buildCloudProjectsUrl());
   const cloudProjects = normalizeProjects(result.projects || []);
   if (!cloudProjects.length) {
-    await saveProjectsToCloud();
     return false;
   }
   const currentProject = cloudProjects.some((project) => project.name === settings.currentProject)
@@ -1042,7 +1041,6 @@ async function refreshProjectsFromCloud() {
   saveJson(STORAGE_KEYS.settings, settings);
   applySettingsToUi();
   setCurrentProject(settings.currentProject);
-  saveProjectsToCloud().catch(() => {});
   return true;
 }
 
