@@ -84,6 +84,8 @@ let originalProjectName = "";
 let editingExpenseId = "";
 let autoRefreshTimer = 0;
 let projectPeopleDraft = [];
+let editingPersonIndex = -1;
+let editingPersonError = "";
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
@@ -484,13 +486,29 @@ function renderProjectPeopleEditor() {
   }
 
   projectPeopleDraft.forEach((person, index) => {
-    const row = document.createElement("label");
-    row.className = "person-editor-row";
-    row.innerHTML = `
-      <span>${index + 1}</span>
-      <input type="text" value="${person.name}" data-person-index="${index}" aria-label="人員 ${index + 1}" />
-    `;
+    const row = document.createElement("div");
+    row.className = `person-editor-row${editingPersonIndex === index ? " is-editing" : ""}`;
+    row.dataset.personIndex = String(index);
+    row.innerHTML =
+      editingPersonIndex === index
+        ? `
+          <span>${index + 1}</span>
+          <div class="person-edit-field">
+            ${editingPersonError ? `<small>${editingPersonError}</small>` : ""}
+            <input type="text" value="${person.name}" data-person-edit-input aria-label="人員 ${index + 1}" />
+          </div>
+          <button class="tool-button compact-tool" type="button" data-action="confirm-person" aria-label="確認修改" title="確認修改">✓</button>
+          <button class="tool-button compact-tool danger-tool" type="button" data-action="cancel-person" aria-label="取消修改" title="取消修改">✗</button>
+        `
+        : `
+          <span>${index + 1}</span>
+          <strong>${person.name}</strong>
+          <button class="tool-button compact-tool" type="button" data-action="edit-person" aria-label="編輯人員" title="編輯人員">✎</button>
+        `;
     projectPeopleList.append(row);
+    if (editingPersonIndex === index) {
+      row.querySelector("input").focus();
+    }
   });
 }
 
@@ -509,13 +527,48 @@ function addProjectPerson() {
   renderProjectPeopleEditor();
 }
 
-projectPeopleList.addEventListener("input", (event) => {
-  const index = Number(event.target.dataset.personIndex);
+projectPeopleList.addEventListener("click", (event) => {
+  const action = event.target.dataset.action;
+  if (!action) return;
+  const row = event.target.closest(".person-editor-row");
+  const index = Number(row?.dataset.personIndex);
   if (!Number.isInteger(index) || !projectPeopleDraft[index]) return;
-  projectPeopleDraft[index] = {
-    ...projectPeopleDraft[index],
-    name: event.target.value,
-  };
+
+  if (action === "edit-person") {
+    editingPersonIndex = index;
+    editingPersonError = "";
+    renderProjectPeopleEditor();
+    return;
+  }
+
+  if (action === "cancel-person") {
+    editingPersonIndex = -1;
+    editingPersonError = "";
+    renderProjectPeopleEditor();
+    return;
+  }
+
+  if (action === "confirm-person") {
+    const input = row.querySelector("[data-person-edit-input]");
+    const nextName = input.value.trim();
+    if (!nextName) {
+      editingPersonError = "*必填；如需刪除人員，請聯繫管理員操作";
+      renderProjectPeopleEditor();
+      return;
+    }
+    if (projectPeopleDraft.some((person, personIndex) => personIndex !== index && person.name === nextName)) {
+      editingPersonError = "人員名稱已存在";
+      renderProjectPeopleEditor();
+      return;
+    }
+    projectPeopleDraft[index] = {
+      ...projectPeopleDraft[index],
+      name: nextName,
+    };
+    editingPersonIndex = -1;
+    editingPersonError = "";
+    renderProjectPeopleEditor();
+  }
 });
 
 addProjectPersonButton.addEventListener("click", addProjectPerson);
@@ -1257,6 +1310,8 @@ function openProjectDialog(mode) {
   saveProjectButton.textContent = mode === "edit" ? "儲存專案" : "建立專案";
   projectNameInput.value = mode === "edit" ? currentProject.name : "";
   projectPeopleDraft = (mode === "edit" ? currentProject.people : []).map((name) => ({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, name, originalName: name }));
+  editingPersonIndex = -1;
+  editingPersonError = "";
   newProjectPersonInput.value = "";
   renderProjectPeopleEditor();
   saveProjectButton.disabled = false;
@@ -1352,6 +1407,8 @@ saveProjectButton.addEventListener("click", async () => {
   projectNameInput.value = "";
   newProjectPersonInput.value = "";
   projectPeopleDraft = [];
+  editingPersonIndex = -1;
+  editingPersonError = "";
   saveProjectButton.disabled = false;
   applySettingsToUi();
   setCurrentProject(projectName);

@@ -309,9 +309,14 @@ h2 {
 
 .person-editor-row {
   display: grid;
-  grid-template-columns: 32px 1fr;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
+}
+
+.person-editor-row.is-editing {
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: end;
 }
 
 .person-editor-row span {
@@ -325,6 +330,25 @@ h2 {
   color: var(--sage-deep);
   font-size: 0.8rem;
   font-weight: 900;
+}
+
+.person-editor-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.person-edit-field {
+  display: grid;
+  gap: 4px;
+}
+
+.person-edit-field small {
+  color: #b65f5f;
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.35;
 }
 
 .person-editor-row input {
@@ -835,9 +859,11 @@ h2 {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  top: calc(14px + env(safe-area-inset-top));
+  bottom: auto;
+  z-index: 9999;
   max-width: min(92vw, 420px);
-  transform: translate(-50%, 18px);
+  transform: translate(-50%, -12px);
   opacity: 0;
   pointer-events: none;
   padding: 11px 14px;
