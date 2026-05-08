@@ -52,7 +52,9 @@ const addProjectButton = document.querySelector("#addProjectButton");
 const editProjectButton = document.querySelector("#editProjectButton");
 const deleteProjectButton = document.querySelector("#deleteProjectButton");
 const projectNameInput = document.querySelector("#projectNameInput");
-const projectPeopleInput = document.querySelector("#projectPeopleInput");
+const projectPeopleList = document.querySelector("#projectPeopleList");
+const newProjectPersonInput = document.querySelector("#newProjectPersonInput");
+const addProjectPersonButton = document.querySelector("#addProjectPersonButton");
 const projectCurrencyOptions = document.querySelector("#projectCurrencyOptions");
 const projectExchangeRateInput = document.querySelector("#projectExchangeRateInput");
 const fetchRateButton = document.querySelector("#fetchRateButton");
@@ -81,6 +83,7 @@ let projectDialogMode = "create";
 let originalProjectName = "";
 let editingExpenseId = "";
 let autoRefreshTimer = 0;
+let projectPeopleDraft = [];
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
@@ -469,6 +472,58 @@ function fillProjectCurrencyOptions() {
   }
   updateProjectExchangeRateInput();
 }
+
+function renderProjectPeopleEditor() {
+  projectPeopleList.innerHTML = "";
+  if (!projectPeopleDraft.length) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state compact-empty";
+    empty.textContent = "尚未新增人員";
+    projectPeopleList.append(empty);
+    return;
+  }
+
+  projectPeopleDraft.forEach((person, index) => {
+    const row = document.createElement("label");
+    row.className = "person-editor-row";
+    row.innerHTML = `
+      <span>${index + 1}</span>
+      <input type="text" value="${person.name}" data-person-index="${index}" aria-label="人員 ${index + 1}" />
+    `;
+    projectPeopleList.append(row);
+  });
+}
+
+function addProjectPerson() {
+  const name = newProjectPersonInput.value.trim();
+  if (!name) {
+    showToast("請輸入人員名稱");
+    return;
+  }
+  if (projectPeopleDraft.some((person) => person.name === name)) {
+    showToast("人員名稱已存在");
+    return;
+  }
+  projectPeopleDraft.push({ id: "", name, originalName: "" });
+  newProjectPersonInput.value = "";
+  renderProjectPeopleEditor();
+}
+
+projectPeopleList.addEventListener("input", (event) => {
+  const index = Number(event.target.dataset.personIndex);
+  if (!Number.isInteger(index) || !projectPeopleDraft[index]) return;
+  projectPeopleDraft[index] = {
+    ...projectPeopleDraft[index],
+    name: event.target.value,
+  };
+});
+
+addProjectPersonButton.addEventListener("click", addProjectPerson);
+newProjectPersonInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  addProjectPerson();
+});
 
 projectCurrencyOptions.addEventListener("change", updateProjectExchangeRateInput);
 fetchRateButton.addEventListener("click", fetchLatestExchangeRate);
@@ -906,6 +961,15 @@ async function renameProjectOnCloud(oldName, newName) {
   await requestScript(buildEndpointUrl(params));
 }
 
+async function renamePeopleOnCloud(projectName, renames) {
+  if (!settings.endpointUrl || !renames.length) return;
+  const params = new URLSearchParams({
+    payload: JSON.stringify({ action: "renamePeople", projectName, renames }),
+    ts: String(Date.now()),
+  });
+  await requestScript(buildEndpointUrl(params));
+}
+
 async function refreshProjectsFromCloud() {
   if (!settings.endpointUrl) return false;
   const result = await requestScript(buildCloudProjectsUrl());
@@ -1192,7 +1256,9 @@ function openProjectDialog(mode) {
   projectDialogTitle.textContent = mode === "edit" ? "編輯旅遊專案" : "新增旅遊專案";
   saveProjectButton.textContent = mode === "edit" ? "儲存專案" : "建立專案";
   projectNameInput.value = mode === "edit" ? currentProject.name : "";
-  projectPeopleInput.value = mode === "edit" ? currentProject.people.join(", ") : getPeople().join(", ");
+  projectPeopleDraft = (mode === "edit" ? currentProject.people : []).map((name) => ({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`, name, originalName: name }));
+  newProjectPersonInput.value = "";
+  renderProjectPeopleEditor();
   saveProjectButton.disabled = false;
   fillProjectCurrencyOptions();
   projectDialog.showModal();
@@ -1225,14 +1291,26 @@ saveProjectButton.addEventListener("click", async () => {
     showToast("\u8acb\u8f38\u5165\u65c5\u904a\u5c08\u6848\u540d\u7a31");
     return;
   }
-  const projectPeople = projectPeopleInput.value
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
+  const projectPeople = projectPeopleDraft.map((person) => person.name.trim()).filter(Boolean);
   if (!projectPeople.length) {
     showToast("請輸入這個專案的人員名單");
     return;
   }
+  if (new Set(projectPeople).size !== projectPeople.length) {
+    showToast("人員名稱不可重複");
+    return;
+  }
+  const currentProjectBeforeEdit = getCurrentProject();
+  const originalPeople = projectDialogMode === "edit" ? projectPeopleDraft.filter((person) => person.originalName) : [];
+  if (projectDialogMode === "edit" && originalPeople.some((person) => !person.name.trim())) {
+    showToast("既有人員不可刪除，若需改名請輸入新名稱");
+    return;
+  }
+  const renamedPeople = projectDialogMode === "edit"
+    ? originalPeople
+        .map((person) => ({ oldName: person.originalName, newName: person.name.trim() }))
+        .filter((item) => item.newName && item.oldName !== item.newName)
+    : [];
   const selectedCurrencies = [
     "TWD",
     ...[...projectCurrencyOptions.querySelectorAll('input[name="projectCurrency"]:checked')]
@@ -1254,9 +1332,17 @@ saveProjectButton.addEventListener("click", async () => {
   ];
   settings.currentProject = projectName;
   const renamedProject = projectDialogMode === "edit" && originalProjectName && originalProjectName !== projectName;
-  if (projectDialogMode === "edit" && originalProjectName && originalProjectName !== projectName) {
+  if (projectDialogMode === "edit" && originalProjectName) {
     expenses = expenses.map((expense) =>
-      expense.projectName === originalProjectName ? { ...expense, projectName, projectCurrencies: normalizeCurrencies(selectedCurrencies) } : expense,
+      expense.projectName === originalProjectName
+        ? {
+            ...expense,
+            projectName,
+            projectCurrencies: normalizeCurrencies(selectedCurrencies),
+            buyer: renamedPeople.find((item) => item.oldName === expense.buyer)?.newName || expense.buyer,
+            payer: renamedPeople.find((item) => item.oldName === expense.payer)?.newName || expense.payer,
+          }
+        : expense,
     );
     saveJson(STORAGE_KEYS.expenses, expenses);
   }
@@ -1264,7 +1350,8 @@ saveProjectButton.addEventListener("click", async () => {
   saveJson(STORAGE_KEYS.settings, settings);
   projectDialog.close();
   projectNameInput.value = "";
-  projectPeopleInput.value = "";
+  newProjectPersonInput.value = "";
+  projectPeopleDraft = [];
   saveProjectButton.disabled = false;
   applySettingsToUi();
   setCurrentProject(projectName);
@@ -1272,6 +1359,7 @@ saveProjectButton.addEventListener("click", async () => {
     if (renamedProject) {
       await renameProjectOnCloud(originalProjectName, projectName);
     }
+    await renamePeopleOnCloud(projectName, renamedPeople);
     await saveProjectsToCloud();
   } catch (error) {
     showToast("專案已儲存本機，Google Sheet 分頁/專案清單同步失敗");

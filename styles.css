@@ -302,6 +302,43 @@ h2 {
   accent-color: var(--sage);
 }
 
+.people-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.person-editor-row {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.person-editor-row span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: 8px;
+  background: #e8dfd6;
+  color: var(--sage-deep);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.person-editor-row input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+}
+
+.compact-empty {
+  padding: 10px;
+}
+
 .currency-checks {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

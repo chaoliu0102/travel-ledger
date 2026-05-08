@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260508-2" />
-    <link rel="icon" href="./icon.svg?v=20260508-2" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260508-4" />
+    <link rel="icon" href="./icon.svg?v=20260508-4" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260508-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260508-4" />
   </head>
   <body>
     <main class="app-shell">
@@ -224,10 +224,14 @@
           <span>旅遊專案名稱</span>
           <input id="projectNameInput" type="text" placeholder="大阪 2026" />
         </label>
-        <label class="field">
+        <div class="field">
           <span>此專案人員名單</span>
-          <input id="projectPeopleInput" type="text" placeholder="兆, 婷, 朋友A" />
-        </label>
+          <div class="people-editor" id="projectPeopleList"></div>
+          <div class="inline-field">
+            <input id="newProjectPersonInput" type="text" placeholder="輸入一位人員名稱" />
+            <button class="tool-button" id="addProjectPersonButton" type="button" aria-label="新增人員" title="新增人員">＋</button>
+          </div>
+        </div>
         <div class="field">
           <span>此專案可用幣別</span>
           <div class="currency-checks" id="projectCurrencyOptions"></div>
@@ -240,11 +244,11 @@
           </div>
         </label>
         <button class="primary-button" id="saveProjectButton" type="button">建立專案</button>
-        <p class="hint">台幣會固定保留；其餘幣別可依目的地勾選。</p>
+        <p class="hint">台幣會固定保留。既有人員不可刪除；如需改名，請直接修改該列名稱，新人員會加入名單最後。</p>
       </form>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260508-2" type="module"></script>
+    <script src="./app.js?v=20260508-4" type="module"></script>
   </body>
 </html>
