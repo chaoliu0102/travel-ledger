@@ -154,6 +154,12 @@ h2 {
   color: #755f2e;
 }
 
+.connection-banner.is-loading {
+  border-color: rgba(185, 156, 99, 0.58);
+  background: rgba(227, 206, 144, 0.3);
+  color: #7a6330;
+}
+
 .project-bar .field {
   flex: 1 1 auto;
 }
@@ -181,6 +187,7 @@ h2 {
   min-height: 40px;
   background: transparent;
   color: var(--muted);
+  letter-spacing: 0.08em;
 }
 
 .tab.is-active {
@@ -191,7 +198,7 @@ h2 {
 
 .status-strip {
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
   margin-bottom: 14px;
   padding: 12px;
@@ -199,6 +206,14 @@ h2 {
   border-radius: 8px;
   background: rgba(255, 253, 249, 0.82);
   box-shadow: var(--shadow);
+}
+
+.status-strip > div {
+  min-width: 0;
+}
+
+.status-strip > div:not(.action-row) {
+  flex: 1 1 0;
 }
 
 .action-row {
@@ -222,6 +237,11 @@ h2 {
   margin-bottom: 5px;
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.status-strip strong {
+  display: block;
+  white-space: nowrap;
 }
 
 .view {
@@ -284,6 +304,11 @@ h2 {
 .field select {
   min-height: 46px;
   padding: 0 12px;
+}
+
+.field input[readonly] {
+  background: #f6f2eb;
+  color: var(--muted);
 }
 
 .field textarea {
@@ -778,6 +803,19 @@ h2 {
   margin: 0;
 }
 
+.stat-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12em, 0.86fr);
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.stat-main {
+  min-width: 0;
+  padding: 14px;
+}
+
 .stat-head {
   display: flex;
   justify-content: space-between;
@@ -803,7 +841,16 @@ h2 {
 
 .stat-breakdown {
   line-height: 1.45;
-  margin-bottom: 8px;
+}
+
+.money-lines {
+  display: grid;
+  gap: 2px;
+}
+
+.money-lines span {
+  display: block;
+  white-space: nowrap;
 }
 
 .stat-card dl {
@@ -812,18 +859,26 @@ h2 {
   margin: 0;
 }
 
-.stat-card div {
+.stat-debts {
+  align-content: center;
+  padding: 14px;
+  background: var(--sage-deep);
+  color: #fffdf9;
+}
+
+.stat-card div,
+.stat-debts div {
   display: grid;
   gap: 3px;
 }
 
-.stat-card dt {
-  color: var(--muted);
+.stat-debts dt {
+  color: rgba(255, 253, 249, 0.72);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
-.stat-card dd {
+.stat-debts dd {
   margin: 0;
   font-weight: 850;
 }
@@ -929,6 +984,11 @@ h2 {
   transform: translate(-50%, 0);
 }
 
+.toast.toast-warning {
+  background: #f4d8d6;
+  color: #8f4d4d;
+}
+
 @media (max-width: 620px) {
   .topbar {
     align-items: flex-start;
@@ -951,17 +1011,32 @@ h2 {
   }
 
   .status-strip,
-  .project-bar,
   .grid-2,
   .person-summary {
     display: grid;
     grid-template-columns: 1fr;
   }
 
+  .status-strip {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(58px, 0.72fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .status-strip span {
+    font-size: 0.7rem;
+  }
+
+  .status-strip strong {
+    font-size: 0.94rem;
+  }
+
   .action-row {
     display: flex;
     justify-content: flex-end;
-    width: 100%;
+    width: auto;
   }
 
   .primary-button {
@@ -975,6 +1050,7 @@ h2 {
   }
 
   .project-bar {
+    display: grid;
     grid-template-columns: 1fr auto;
   }
 
@@ -984,6 +1060,19 @@ h2 {
 
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    grid-template-columns: minmax(0, 1fr) minmax(12em, 0.84fr);
+  }
+
+  .stat-main,
+  .stat-debts {
+    padding: 12px;
+  }
+
+  .stat-total {
+    font-size: 1.65rem;
   }
 
   .currency-checks {

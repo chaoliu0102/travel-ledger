@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260509-1" />
-    <link rel="icon" href="./icon.svg?v=20260509-1" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260509-8" />
+    <link rel="icon" href="./icon.svg?v=20260509-8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260509-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260509-8" />
   </head>
   <body>
     <main class="app-shell">
@@ -22,7 +22,7 @@
         </div>
         <div class="top-actions">
           <button class="icon-button cloud-action" id="refreshCloudButton" type="button" aria-label="雲端更新" title="雲端更新">☁</button>
-          <button class="icon-button share-action" id="shareButton" type="button" aria-label="分享" title="分享">⇪</button>
+          <button class="icon-button share-action" id="shareButton" type="button" aria-label="分享" title="分享">➤</button>
           <button class="icon-button help-action" id="helpButton" type="button" aria-label="使用說明" title="使用說明">?</button>
           <button class="icon-button settings-action" id="settingsButton" type="button" aria-label="設定" title="設定">⚙</button>
         </div>
@@ -33,9 +33,9 @@
         <button class="text-button" id="installButton" type="button" hidden>安裝</button>
       </section>
 
-      <section class="project-bar" aria-label="旅遊專案">
+      <section class="project-bar" aria-label="選擇一趟旅程">
         <label class="field compact">
-          <span>旅遊專案</span>
+          <span>選擇一趟旅程</span>
           <select id="projectSelect"></select>
         </label>
         <div class="icon-actions">
@@ -44,12 +44,6 @@
           <button class="tool-button danger-tool" id="deleteProjectButton" type="button" aria-label="刪除專案" title="刪除專案">🗑</button>
         </div>
       </section>
-
-      <nav class="tabs" aria-label="頁面">
-        <button class="tab is-active" type="button" data-view="entryView">記帳</button>
-        <button class="tab" type="button" data-view="peopleView">個人明細</button>
-        <button class="tab" type="button" data-view="statsView">統計</button>
-      </nav>
 
       <section class="status-strip">
         <div>
@@ -64,6 +58,12 @@
           <button class="text-button sync-text-button" id="syncButton" type="button">手動同步</button>
         </div>
       </section>
+
+      <nav class="tabs" aria-label="頁面">
+        <button class="tab is-active" type="button" data-view="entryView">記帳</button>
+        <button class="tab" type="button" data-view="peopleView">個人明細</button>
+        <button class="tab" type="button" data-view="statsView">統計</button>
+      </nav>
 
       <section class="view is-visible" id="entryView">
         <form class="expense-form" id="expenseForm">
@@ -200,17 +200,13 @@
           <button class="icon-button" value="close" type="submit" aria-label="關閉">關閉</button>
         </div>
         <label class="field">
-          <span>Apps Script Web App URL</span>
-          <input id="endpointUrl" type="url" placeholder="https://script.google.com/macros/s/..." />
-        </label>
-        <button class="primary-button" id="saveSettingsButton" type="button">儲存設定</button>
-        <label class="field">
-          <span>匯入專案</span>
+          <span>同步來源</span>
           <div class="inline-field">
-            <input id="importProjectInput" type="text" placeholder="輸入 Google Sheet 分頁名稱" />
-            <button class="tool-button" id="importProjectButton" type="button" aria-label="匯入專案" title="匯入專案">＋</button>
+            <input id="endpointUrl" type="url" placeholder="https://script.google.com/macros/s/..." readonly />
+            <button class="tool-button" id="unlockEndpointButton" type="button" aria-label="編輯同步來源" title="編輯同步來源">✎</button>
           </div>
         </label>
+        <button class="primary-button" id="saveSettingsButton" type="button">儲存設定</button>
         <p class="hint">同一個 Apps Script URL 可給旅伴共用。APP 會嘗試從 Google Sheet 自動帶入最新 URL；每台手機會先暫存在本機，再同步到同一份 Google Sheet。</p>
         <p class="version-note" id="versionInfo">目前版本：讀取中</p>
         <p class="version-warning" id="versionWarning" hidden></p>
@@ -254,6 +250,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260509-1" type="module"></script>
+    <script src="./app.js?v=20260509-8" type="module"></script>
   </body>
 </html>

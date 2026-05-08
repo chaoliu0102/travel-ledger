@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260509-1";
+const APP_VERSION = "20260509-8";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -46,8 +46,7 @@ const amountInput = document.querySelector("#amount");
 const buyerInput = document.querySelector("#buyer");
 const payerInput = document.querySelector("#payer");
 const endpointUrlInput = document.querySelector("#endpointUrl");
-const importProjectInput = document.querySelector("#importProjectInput");
-const importProjectButton = document.querySelector("#importProjectButton");
+const unlockEndpointButton = document.querySelector("#unlockEndpointButton");
 const projectSelect = document.querySelector("#projectSelect");
 const addProjectButton = document.querySelector("#addProjectButton");
 const editProjectButton = document.querySelector("#editProjectButton");
@@ -91,6 +90,9 @@ let autoRefreshTimer = 0;
 let projectPeopleDraft = [];
 let editingPersonIndex = -1;
 let editingPersonError = "";
+let cloudLoadingCount = 0;
+let endpointUnlocked = false;
+let projectSelectionConfirmed = false;
 
 let expenses = loadJson(STORAGE_KEYS.expenses, []);
 let settings = normalizeSettings({ ...DEFAULT_SETTINGS, ...loadJson(STORAGE_KEYS.settings, {}) });
@@ -224,17 +226,46 @@ function currencyBreakdown(totals, currencies = getCurrentProject().currencies) 
     .join(" · ") || "尚無消費";
 }
 
-function showToast(message) {
+function moneyLinesHtml(totals, currencies = getCurrentProject().currencies, options = {}) {
+  const lines = currencies
+    .filter((currency) => options.showZero || Number(totals[currency] || 0) !== 0)
+    .map((currency) => {
+      const prefix = options.withLabel ? `${CURRENCY_LABELS[currency] || currency} ` : "";
+      return `<span>${prefix}${formatMoney(totals[currency] || 0, currency)}</span>`;
+    });
+  return lines.length ? lines.join("") : `<span>${options.emptyText || "尚無消費"}</span>`;
+}
+
+function showToast(message, tone = "default") {
   toast.textContent = message;
+  toast.classList.toggle("toast-warning", tone === "warning");
   toast.classList.add("is-visible");
   window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => toast.classList.remove("is-visible"), 2600);
+  showToast.timer = window.setTimeout(() => {
+    toast.classList.remove("is-visible", "toast-warning");
+  }, 2600);
 }
 
 function updateConnectionStatus() {
+  if (cloudLoadingCount > 0) {
+    connectionBanner.classList.remove("is-offline");
+    connectionBanner.classList.add("is-loading");
+    connectionStatus.textContent = "雲端更新中，請稍候";
+    return;
+  }
   const online = navigator.onLine;
+  connectionBanner.classList.remove("is-loading");
   connectionBanner.classList.toggle("is-offline", !online);
   connectionStatus.textContent = online ? "連線正常" : "離線中，資料會先保存在本機";
+}
+
+function setCloudLoading(isLoading) {
+  cloudLoadingCount = Math.max(0, cloudLoadingCount + (isLoading ? 1 : -1));
+  refreshCloudButton.disabled = cloudLoadingCount > 0;
+  projectSelect.disabled = cloudLoadingCount > 0;
+  refreshCloudButton.textContent = cloudLoadingCount > 0 ? "…" : "☁";
+  refreshCloudButton.title = cloudLoadingCount > 0 ? "雲端更新中" : "雲端更新";
+  updateConnectionStatus();
 }
 
 function updateVersionInfo() {
@@ -425,7 +456,8 @@ function getCurrentExpenses() {
   return expenses.filter((expense) => expense.projectName === currentProject.name);
 }
 
-function setCurrentProject(projectName) {
+function setCurrentProject(projectName, options = {}) {
+  projectSelectionConfirmed = options.confirmed !== false;
   settings.currentProject = projectName;
   saveJson(STORAGE_KEYS.settings, settings);
   fillProjectSelect();
@@ -450,9 +482,32 @@ function addToTotals(totals, currency, amount) {
   totals[currency] = (totals[currency] || 0) + Number(amount || 0);
 }
 
+function updateProjectActionButtons() {
+  editProjectButton.hidden = !projectSelectionConfirmed;
+  deleteProjectButton.hidden = !projectSelectionConfirmed;
+}
+
 function fillPeopleSelects() {
   const people = getPeople();
-  for (const select of [buyerInput, payerInput, personFilter]) {
+  const entrySelects = [buyerInput, payerInput];
+  if (!projectSelectionConfirmed) {
+    for (const select of entrySelects) {
+      select.innerHTML = "";
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "--";
+      option.selected = true;
+      select.append(option);
+    }
+    personFilter.innerHTML = "";
+    const option = document.createElement("option");
+    option.value = "";
+    option.textContent = "--";
+    option.selected = true;
+    personFilter.append(option);
+    return;
+  }
+  for (const select of [...entrySelects, personFilter]) {
     const current = select.value;
     select.innerHTML = "";
     for (const person of people) {
@@ -468,13 +523,19 @@ function fillPeopleSelects() {
 function fillProjectSelect() {
   const currentProject = getCurrentProject();
   projectSelect.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "選擇要紀錄的旅程";
+  placeholder.disabled = true;
+  projectSelect.append(placeholder);
   for (const project of getProjects()) {
     const option = document.createElement("option");
     option.value = project.name;
     option.textContent = project.name;
     projectSelect.append(option);
   }
-  projectSelect.value = currentProject.name;
+  projectSelect.value = projectSelectionConfirmed ? currentProject.name : "";
+  updateProjectActionButtons();
 }
 
 function fillCurrencyOptions() {
@@ -668,8 +729,26 @@ async function fetchLatestExchangeRate() {
   }
 }
 
+function endpointDisplayValue() {
+  return settings.endpointUrl ? "同步來源已設定" : "尚未設定同步來源";
+}
+
+function setEndpointEditMode(unlocked) {
+  endpointUnlocked = unlocked;
+  endpointUrlInput.readOnly = !unlocked;
+  endpointUrlInput.type = unlocked ? "url" : "text";
+  endpointUrlInput.value = unlocked ? settings.endpointUrl : endpointDisplayValue();
+  unlockEndpointButton.textContent = unlocked ? "鎖" : "✎";
+  unlockEndpointButton.setAttribute("aria-label", unlocked ? "鎖定同步來源" : "編輯同步來源");
+  unlockEndpointButton.title = unlocked ? "鎖定同步來源" : "編輯同步來源";
+}
+
+function getEndpointUrlFromSettingsForm() {
+  return endpointUnlocked ? endpointUrlInput.value.trim() : settings.endpointUrl;
+}
+
 function applySettingsToUi() {
-  endpointUrlInput.value = settings.endpointUrl;
+  setEndpointEditMode(endpointUnlocked);
   fillPeopleSelects();
   fillProjectSelect();
   fillCurrencyOptions();
@@ -874,16 +953,18 @@ function renderStats() {
     const card = document.createElement("article");
     card.className = "stat-card";
     card.innerHTML = `
-      <div class="stat-head">
-        <h3>${person}</h3>
-        <span>個人消費總額</span>
+      <div class="stat-main">
+        <div class="stat-head">
+          <h3>${person}</h3>
+          <span>個人消費總額</span>
+        </div>
+        <strong class="stat-total">${formatMoney(spentTwdTotal, "TWD")}</strong>
+        <p class="stat-breakdown money-lines">${moneyLinesHtml(stats.spent, currentProject.currencies, { withLabel: true })}</p>
       </div>
-      <strong class="stat-total">${formatMoney(spentTwdTotal, "TWD")}</strong>
-      <p class="stat-breakdown">${currencyBreakdown(stats.spent, currentProject.currencies)}</p>
-      <dl>
-        <div><dt>幫人代墊</dt><dd>${formatTotals(stats.paidForOthers, currentProject.currencies)}</dd></div>
-        <div><dt>未結應收</dt><dd>${formatTotals(stats.owedByOthers, currentProject.currencies)}</dd></div>
-        <div><dt>未結應付</dt><dd>${formatTotals(stats.owesToOthers, currentProject.currencies)}</dd></div>
+      <dl class="stat-debts">
+        <div><dt>幫人代墊</dt><dd class="money-lines">${moneyLinesHtml(stats.paidForOthers, currentProject.currencies, { showZero: true })}</dd></div>
+        <div><dt>未結應收</dt><dd class="money-lines">${moneyLinesHtml(stats.owedByOthers, currentProject.currencies, { showZero: true })}</dd></div>
+        <div><dt>未結應付</dt><dd class="money-lines">${moneyLinesHtml(stats.owesToOthers, currentProject.currencies, { showZero: true })}</dd></div>
       </dl>
     `;
     statsGrid.append(card);
@@ -946,7 +1027,7 @@ function renderPersonView() {
 function render() {
   const currentProject = getCurrentProject();
   const currentExpenses = getCurrentExpenses();
-  projectSelect.value = currentProject.name;
+  projectSelect.value = projectSelectionConfirmed ? currentProject.name : "";
   const today = todayDateValue();
   const todayRecords = currentExpenses.filter((expense) => expense.date === today);
   const todayTotals = totalsFor(todayRecords, currentProject.currencies);
@@ -1096,44 +1177,8 @@ async function refreshProjectsFromCloud() {
   });
   saveJson(STORAGE_KEYS.settings, settings);
   applySettingsToUi();
-  setCurrentProject(settings.currentProject);
+  setCurrentProject(settings.currentProject, { confirmed: projectSelectionConfirmed });
   return true;
-}
-
-async function importProjectFromCloud() {
-  const projectName = importProjectInput.value.trim();
-  if (!projectName) {
-    showToast("請輸入 Google Sheet 分頁名稱");
-    return;
-  }
-  settings = normalizeSettings({
-    ...settings,
-    endpointUrl: endpointUrlInput.value.trim() || settings.endpointUrl,
-  });
-  saveJson(STORAGE_KEYS.settings, settings);
-  if (!settings.endpointUrl) {
-    showToast("請先儲存 Apps Script Web App URL");
-    return;
-  }
-
-  importProjectButton.disabled = true;
-  try {
-    await refreshProjectsFromCloud();
-    const imported = getProjects().find((project) => project.name === projectName);
-    if (!imported) {
-      showToast("找不到同名 Google Sheet 分頁");
-      return;
-    }
-    setCurrentProject(imported.name);
-    await refreshFromCloud();
-    importProjectInput.value = "";
-    settingsDialog.close();
-    showToast(`已匯入「${imported.name}」`);
-  } catch (error) {
-    showToast(error.message || "匯入專案失敗");
-  } finally {
-    importProjectButton.disabled = false;
-  }
 }
 
 function cloudRecordId(record) {
@@ -1156,7 +1201,7 @@ async function refreshFromCloud(options = {}) {
     return;
   }
   try {
-    refreshCloudButton.disabled = true;
+    setCloudLoading(true);
     await refreshProjectsFromCloud();
     const result = await requestScript(buildCloudListUrl());
     const currentProject = getCurrentProject();
@@ -1179,7 +1224,7 @@ async function refreshFromCloud(options = {}) {
   } catch (error) {
     if (!options.silent) showToast(error.message);
   } finally {
-    refreshCloudButton.disabled = false;
+    setCloudLoading(false);
   }
 }
 
@@ -1218,6 +1263,13 @@ async function syncPending() {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!projectSelect.value) {
+    projectSelectionConfirmed = false;
+    fillPeopleSelects();
+    showToast("請先選擇要紀錄的旅程", "warning");
+    projectSelect.focus();
+    return;
+  }
   const wasEditing = Boolean(editingExpenseId);
   const expense = buildExpense(new FormData(form));
   if (wasEditing) {
@@ -1343,6 +1395,10 @@ personList.addEventListener("change", handleExpenseListAction);
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
+    if (!projectSelect.value && tab.dataset.view !== "entryView") {
+      showToast("請先選擇要紀錄的旅程", "warning");
+      return;
+    }
     document.querySelectorAll(".tab").forEach((item) => item.classList.remove("is-active"));
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("is-visible"));
     tab.classList.add("is-active");
@@ -1352,11 +1408,16 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
 personFilter.addEventListener("change", renderPersonView);
 projectSelect.addEventListener("change", () => {
+  if (!projectSelect.value) return;
   setCurrentProject(projectSelect.value);
   scheduleProjectCloudRefresh();
 });
 
 function openProjectDialog(mode) {
+  if (mode === "edit" && !projectSelectionConfirmed) {
+    showToast("請先選擇要紀錄的旅程", "warning");
+    return;
+  }
   projectDialogMode = mode;
   const currentProject = getCurrentProject();
   originalProjectName = mode === "edit" ? currentProject.name : "";
@@ -1376,6 +1437,10 @@ function openProjectDialog(mode) {
 addProjectButton.addEventListener("click", () => openProjectDialog("create"));
 editProjectButton.addEventListener("click", () => openProjectDialog("edit"));
 deleteProjectButton.addEventListener("click", () => {
+  if (!projectSelectionConfirmed) {
+    showToast("請先選擇要紀錄的旅程", "warning");
+    return;
+  }
   const currentProject = getCurrentProject();
   if (getProjects().length <= 1) {
     showToast("至少需要保留一個專案");
@@ -1479,15 +1544,31 @@ saveProjectButton.addEventListener("click", async () => {
   showToast("\u5df2\u65b0\u589e\u65c5\u904a\u5c08\u6848");
 });
 
-settingsButton.addEventListener("click", () => settingsDialog.showModal());
+settingsButton.addEventListener("click", () => {
+  setEndpointEditMode(false);
+  settingsDialog.showModal();
+});
 helpButton.addEventListener("click", () => helpDialog.showModal());
+
+unlockEndpointButton.addEventListener("click", () => {
+  if (endpointUnlocked) {
+    setEndpointEditMode(false);
+    return;
+  }
+  const confirmed = window.confirm("同步來源會影響所有雲端資料讀取。只有管理員需要修改，確定要編輯嗎？");
+  if (!confirmed) return;
+  setEndpointEditMode(true);
+  endpointUrlInput.focus();
+  endpointUrlInput.select();
+});
 
 document.querySelector("#saveSettingsButton").addEventListener("click", async () => {
   settings = normalizeSettings({
     ...settings,
-    endpointUrl: endpointUrlInput.value.trim(),
+    endpointUrl: getEndpointUrlFromSettingsForm(),
   });
   saveJson(STORAGE_KEYS.settings, settings);
+  setEndpointEditMode(false);
   applySettingsToUi();
   render();
   settingsDialog.close();
@@ -1503,7 +1584,6 @@ document.querySelector("#saveSettingsButton").addEventListener("click", async ()
   }
 });
 
-importProjectButton.addEventListener("click", importProjectFromCloud);
 debugProjectsButton.addEventListener("click", async () => {
   if (!settings.endpointUrl) {
     showToast("尚未設定 Apps Script URL");
