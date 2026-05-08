@@ -1,4 +1,4 @@
-const CACHE_NAME = "travel-split-v32";
+const CACHE_NAME = "travel-split-v33";
 const APP_SHELL = [
   "./",
   "./index.html",

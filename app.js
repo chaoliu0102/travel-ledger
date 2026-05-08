@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260508-14";
+const APP_VERSION = "20260508-15";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
@@ -1046,7 +1046,7 @@ function buildCloudProjectsUrl() {
 async function saveProjectsToCloud() {
   if (!settings.endpointUrl) return;
   const params = new URLSearchParams({
-    payload: JSON.stringify({ action: "saveProjects", projects: getProjects() }),
+    payload: JSON.stringify({ action: "saveProjects", projects: getProjects(), clientVersion: APP_VERSION }),
     ts: String(Date.now()),
   });
   await requestScript(buildEndpointUrl(params));
@@ -1490,12 +1490,7 @@ document.querySelector("#saveSettingsButton").addEventListener("click", async ()
     const loaded = await refreshProjectsFromCloud();
     showToast(loaded ? "設定已儲存，已載入雲端專案" : "設定已儲存，已建立雲端專案清單");
   } catch {
-    try {
-      await saveProjectsToCloud();
-      showToast("設定已儲存，已建立雲端專案清單");
-    } catch {
-      showToast("設定已儲存，雲端專案清單尚未同步");
-    }
+    showToast("設定已儲存，雲端專案清單尚未同步");
   }
 });
 
