@@ -4,7 +4,7 @@ const STORAGE_KEYS = {
   activities: "travel-split.activities",
 };
 
-const APP_VERSION = "20260508-15";
+const APP_VERSION = "20260508-16";
 const SHEET_ID = "1Fw2OaJ3UzGdq0GW7XBor7dOPCi6Tm_qwqIzqogMug1Y";
 const URL_HISTORY_SHEET = "AppScriptUrls";
 
