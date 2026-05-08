@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="說走就走 小帳本" />
     <title>說走就走 小帳本</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=20260508-6" />
-    <link rel="icon" href="./icon.svg?v=20260508-6" type="image/svg+xml" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260508-8" />
+    <link rel="icon" href="./icon.svg?v=20260508-8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=20260508-6" />
+    <link rel="stylesheet" href="./styles.css?v=20260508-8" />
   </head>
   <body>
     <main class="app-shell">
@@ -18,8 +18,10 @@
         <div>
           <p class="kicker">Trip Ledger</p>
           <h1>說走就走 小帳本</h1>
+          <p class="top-hint">初次使用可先看「?」說明頁，按「☁」以更新最新資料</p>
         </div>
         <div class="top-actions">
+          <button class="icon-button cloud-action" id="refreshCloudButton" type="button" aria-label="雲端更新" title="雲端更新">☁</button>
           <button class="icon-button share-action" id="shareButton" type="button" aria-label="分享" title="分享">⇪</button>
           <button class="icon-button help-action" id="helpButton" type="button" aria-label="使用說明" title="使用說明">?</button>
           <button class="icon-button settings-action" id="settingsButton" type="button" aria-label="設定" title="設定">⚙</button>
@@ -59,8 +61,7 @@
           <strong id="pendingCount">0</strong>
         </div>
         <div class="action-row">
-          <button class="tool-button" id="syncButton" type="button" aria-label="同步" title="同步">↻</button>
-          <button class="tool-button" id="refreshCloudButton" type="button" aria-label="雲端更新" title="雲端更新">☁</button>
+          <button class="text-button sync-text-button" id="syncButton" type="button">手動同步</button>
         </div>
       </section>
 
@@ -249,6 +250,6 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./app.js?v=20260508-6" type="module"></script>
+    <script src="./app.js?v=20260508-8" type="module"></script>
   </body>
 </html>

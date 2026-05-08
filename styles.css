@@ -79,6 +79,14 @@ button:disabled {
   font-weight: 800;
 }
 
+.top-hint {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
 h1,
 h2,
 h3,
@@ -543,6 +551,10 @@ h2 {
   filter: brightness(0.97);
 }
 
+.top-actions .cloud-action {
+  background: #c9d5d6;
+}
+
 .top-actions .share-action {
   background: #d8c9bd;
 }
@@ -559,6 +571,12 @@ h2 {
   padding: 8px 0;
   background: transparent;
   color: var(--sage-deep);
+}
+
+.sync-text-button {
+  min-height: 40px;
+  padding: 0 2px;
+  white-space: nowrap;
 }
 
 .list-section,
